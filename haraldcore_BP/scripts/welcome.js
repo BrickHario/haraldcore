@@ -8,7 +8,7 @@ world.afterEvents.playerSpawn.subscribe(event => {
   if (event.initialSpawn) {
     system.runTimeout(() => {
       player.sendMessage("§aWelcome to HaraldCore!");
-      dim.runCommand(`playsound note.pling @a`);
+      player.runCommand(`playsound note.pling @a`);
 
       system.runTimeout(() => {
         player.sendMessage("§aHow HARALD likes to play Minecraft..");

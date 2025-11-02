@@ -1,5 +1,4 @@
 import { world, system } from "@minecraft/server";
-import dayCounter from "../scripts/util/dayCounter";
 
 export function registerDeath() {
   const startTick = system.currentTick;
@@ -15,8 +14,8 @@ export function registerDeath() {
     const playedDays = Math.floor(playedTicks / 24000);
 
     system.run(() => {
-      dead.runCommand(`title @s title §cYou survived ${dayCounter(playedDays)} day(s)!`);
-      world.sendMessage(`§e${dead.name} survived ${dayCounter(playedDays)} day(s)!`);
+      dead.runCommand(`title @s title §cYou survived ${playedDays} day(s)!`);
+      world.sendMessage(`§e${dead.name} survived ${playedDays} day(s)!`);
     });
   });
 
