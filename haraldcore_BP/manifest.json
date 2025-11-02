@@ -1,0 +1,29 @@
+{
+    "format_version": 2,
+    "header": {
+        "name": "HaraldCore Mod",
+        "description": "Play Hardcore like HARALD! Good luck..",
+        "uuid": "77073b96-99ee-439b-a9b5-e214d642dda6",
+        "version": [1, 0, 0],
+        "min_engine_version": [1, 16, 0]
+    },
+    "modules": [
+        {
+            "type": "data",
+            "uuid": "a02c6ac0-55d4-496a-a2e9-e7e4c59ff1b8",
+            "version": [1, 0, 0]
+        },
+                {
+            "type": "script",
+            "uuid": "f2622f3b-dee9-49b0-8b5a-0c13bf1c5730",
+            "version": [1, 0, 0],
+            "entry": "scripts/main.js"
+        }
+    ],
+    "dependencies": [
+        {
+            "module_name": "@minecraft/server",
+            "version": "2.1.0"
+        }
+    ]
+}

@@ -1,0 +1,10 @@
+difficulty hard
+gamerule doLimitedCrafting false
+gamerule naturalregeneration false
+gamerule playerssleepingpercentage 101
+gamerule commandblocksenabled false
+gamerule pvp false
+gamerule spawnradius 700
+gamerule doEntityDrops false
+gamerule doMobLoot false
+gamerule doTileDrops false
