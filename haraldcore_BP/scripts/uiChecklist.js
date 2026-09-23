@@ -60,10 +60,12 @@ export async function showHaraldChecklist(player) {
   try {
     const { doneCount, text } = buildTaskText();
 
-    const form = new ActionFormData()
-      .title("§6§lHARALDCORE TASKS")
-      .header(`§6§lTASKS §7(${doneCount}/${TASKS.length})`)
-      .label(text);
+const form = new ActionFormData()
+  .title("§6§lHARALDCORE TASKS")
+  .header(`§6§lTASKS §7(${doneCount}/${TASKS.length})`)
+  .label(text)
+  .divider()
+  .label("§eTip: Finding chests might help..");
 
     await form.show(player);
   } catch (_) {

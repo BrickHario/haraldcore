@@ -4,6 +4,7 @@ import {
   ItemStack,
   ItemLockMode,
 } from "@minecraft/server";
+
 import { showHaraldChecklist } from "./uiChecklist.js";
 
 const BOOK_SLOT = 8;
@@ -16,13 +17,6 @@ function createTaskBook() {
   const book = new ItemStack(BOOK_TYPE, 1);
 
   book.nameTag = BOOK_NAME;
-
-  book.setLore([
-    "§7Select this book to open",
-    "§7the HaraldCore task list.",
-    "",
-    "§eTip: Finding chests might help..",
-  ]);
 
   book.keepOnDeath = true;
   book.lockMode = ItemLockMode.slot;
@@ -46,11 +40,15 @@ function getInventory(player) {
 
 function findEmptyBackupSlot(container) {
   for (let slot = 9; slot < container.size; slot++) {
-    if (!container.getItem(slot)) return slot;
+    if (!container.getItem(slot)) {
+      return slot;
+    }
   }
 
   for (let slot = 0; slot < 8; slot++) {
-    if (!container.getItem(slot)) return slot;
+    if (!container.getItem(slot)) {
+      return slot;
+    }
   }
 
   return -1;
@@ -58,21 +56,38 @@ function findEmptyBackupSlot(container) {
 
 function ensureTaskBook(player) {
   const inventory = getInventory(player);
-  if (!inventory) return false;
+
+  if (!inventory) {
+    return false;
+  }
 
   try {
     const current = inventory.getItem(BOOK_SLOT);
 
-    if (isTaskBook(current)) return true;
+    if (isTaskBook(current)) {
+      return true;
+    }
 
     if (current) {
       const backupSlot = findEmptyBackupSlot(inventory);
-      if (backupSlot === -1) return false;
-      inventory.setItem(backupSlot, current);
+
+      if (backupSlot === -1) {
+        return false;
+      }
+
+      inventory.setItem(
+        backupSlot,
+        current
+      );
     }
 
-    inventory.setItem(BOOK_SLOT, createTaskBook());
+    inventory.setItem(
+      BOOK_SLOT,
+      createTaskBook()
+    );
+
     return true;
+
   } catch (_) {
     return false;
   }
@@ -80,6 +95,7 @@ function ensureTaskBook(player) {
 
 function checkSelectedBook(player) {
   const id = player.id;
+
   const inventory = getInventory(player);
 
   if (!inventory) {
@@ -90,10 +106,16 @@ function checkSelectedBook(player) {
   let selectedIsBook = false;
 
   try {
-    const selectedSlot = player.selectedSlotIndex;
-    const selectedItem = inventory.getItem(selectedSlot);
+    const selectedSlot =
+      player.selectedSlotIndex;
 
-    selectedIsBook = selectedSlot === BOOK_SLOT && isTaskBook(selectedItem);
+    const selectedItem =
+      inventory.getItem(selectedSlot);
+
+    selectedIsBook =
+      selectedSlot === BOOK_SLOT &&
+      isTaskBook(selectedItem);
+
   } catch (_) {
     selectedBookPlayers.delete(id);
     return;
@@ -104,25 +126,44 @@ function checkSelectedBook(player) {
     return;
   }
 
-  if (selectedBookPlayers.has(id)) return;
+  if (selectedBookPlayers.has(id)) {
+    return;
+  }
 
   selectedBookPlayers.add(id);
-  system.run(() => showHaraldChecklist(player));
+
+  system.run(() => {
+    showHaraldChecklist(player);
+  });
 }
 
 export function registerTaskBook() {
-  world.afterEvents.playerSpawn.subscribe((event) => {
-    selectedBookPlayers.delete(event.player.id);
 
-    system.runTimeout(() => {
-      ensureTaskBook(event.player);
-    }, 10);
-  });
+  world.afterEvents.playerSpawn.subscribe(
+    event => {
+
+      const player = event.player;
+
+      selectedBookPlayers.delete(
+        player.id
+      );
+
+      system.runTimeout(() => {
+        ensureTaskBook(player);
+      }, 10);
+
+    }
+  );
 
   system.runInterval(() => {
+
     for (const player of world.getAllPlayers()) {
+
       ensureTaskBook(player);
+
       checkSelectedBook(player);
+
     }
+
   }, 5);
 }
