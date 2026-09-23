@@ -11,10 +11,12 @@ const BOOK_SLOT = 8;
 const BOOK_TYPE = "minecraft:book";
 const BOOK_NAME = "§6§lHaraldCore Tasks";
 
-const selectedBookPlayers = new Set();
 
 function createTaskBook() {
-  const book = new ItemStack(BOOK_TYPE, 1);
+  const book = new ItemStack(
+    BOOK_TYPE,
+    1
+  );
 
   book.nameTag = BOOK_NAME;
 
@@ -24,28 +26,44 @@ function createTaskBook() {
   return book;
 }
 
+
 function isTaskBook(item) {
-  return !!item &&
+  return (
+    !!item &&
     item.typeId === BOOK_TYPE &&
-    item.nameTag === BOOK_NAME;
+    item.nameTag === BOOK_NAME
+  );
 }
+
 
 function getInventory(player) {
   try {
-    return player.getComponent("minecraft:inventory")?.container;
+    return player
+      .getComponent("minecraft:inventory")
+      ?.container;
   } catch (_) {
     return undefined;
   }
 }
 
+
 function findEmptyBackupSlot(container) {
-  for (let slot = 9; slot < container.size; slot++) {
+
+  for (
+    let slot = 9;
+    slot < container.size;
+    slot++
+  ) {
     if (!container.getItem(slot)) {
       return slot;
     }
   }
 
-  for (let slot = 0; slot < 8; slot++) {
+  for (
+    let slot = 0;
+    slot < 8;
+    slot++
+  ) {
     if (!container.getItem(slot)) {
       return slot;
     }
@@ -54,22 +72,31 @@ function findEmptyBackupSlot(container) {
   return -1;
 }
 
+
 function ensureTaskBook(player) {
-  const inventory = getInventory(player);
+
+  const inventory =
+    getInventory(player);
 
   if (!inventory) {
     return false;
   }
 
   try {
-    const current = inventory.getItem(BOOK_SLOT);
+
+    const current =
+      inventory.getItem(BOOK_SLOT);
 
     if (isTaskBook(current)) {
       return true;
     }
 
     if (current) {
-      const backupSlot = findEmptyBackupSlot(inventory);
+
+      const backupSlot =
+        findEmptyBackupSlot(
+          inventory
+        );
 
       if (backupSlot === -1) {
         return false;
@@ -93,60 +120,14 @@ function ensureTaskBook(player) {
   }
 }
 
-function checkSelectedBook(player) {
-  const id = player.id;
-
-  const inventory = getInventory(player);
-
-  if (!inventory) {
-    selectedBookPlayers.delete(id);
-    return;
-  }
-
-  let selectedIsBook = false;
-
-  try {
-    const selectedSlot =
-      player.selectedSlotIndex;
-
-    const selectedItem =
-      inventory.getItem(selectedSlot);
-
-    selectedIsBook =
-      selectedSlot === BOOK_SLOT &&
-      isTaskBook(selectedItem);
-
-  } catch (_) {
-    selectedBookPlayers.delete(id);
-    return;
-  }
-
-  if (!selectedIsBook) {
-    selectedBookPlayers.delete(id);
-    return;
-  }
-
-  if (selectedBookPlayers.has(id)) {
-    return;
-  }
-
-  selectedBookPlayers.add(id);
-
-  system.run(() => {
-    showHaraldChecklist(player);
-  });
-}
 
 export function registerTaskBook() {
 
   world.afterEvents.playerSpawn.subscribe(
     event => {
 
-      const player = event.player;
-
-      selectedBookPlayers.delete(
-        player.id
-      );
+      const player =
+        event.player;
 
       system.runTimeout(() => {
         ensureTaskBook(player);
@@ -155,14 +136,42 @@ export function registerTaskBook() {
     }
   );
 
+  world.afterEvents.itemUse.subscribe(
+    event => {
+
+      const player =
+        event.source;
+
+      const item =
+        event.itemStack;
+
+      if (!isTaskBook(item)) {
+        return;
+      }
+
+      if (
+        player.selectedSlotIndex !==
+        BOOK_SLOT
+      ) {
+        return;
+      }
+
+      system.run(() => {
+        showHaraldChecklist(
+          player
+        );
+      });
+
+    }
+  );
+
   system.runInterval(() => {
 
-    for (const player of world.getAllPlayers()) {
-
+    for (
+      const player
+      of world.getAllPlayers()
+    ) {
       ensureTaskBook(player);
-
-      checkSelectedBook(player);
-
     }
 
   }, 5);
