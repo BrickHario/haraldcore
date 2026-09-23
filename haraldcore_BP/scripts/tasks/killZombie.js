@@ -12,7 +12,7 @@ export function registerKillZombie() {
       dim.runCommand(`scoreboard players reset "${TASK_ZOMBIE}" todo`);
       dim.runCommand(`scoreboard players set "§a✔ ${TASK_ZOMBIE}" todo 0`);
       killer.sendMessage(`§aTask done: ${TASK_ZOMBIE}! Zombie VS Plants?`);
-      dim.runCommand(`playsound random.orb @a`);
+      player.playSound("random.orb");
     });
   });
 };

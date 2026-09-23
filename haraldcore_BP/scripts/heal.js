@@ -35,7 +35,7 @@ export function registerDailyHeal() {
         state.lastHealDay = currentDay;
         healPlayerBy(player, 2);
         player.sendMessage("§aNew day, New luck.");
-      dim.runCommand(`playsound note.pling @a`);
+      player.playSound("note.pling");
       }
 
       playerData.set(player.name, state);

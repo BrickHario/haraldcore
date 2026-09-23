@@ -36,7 +36,7 @@ export function registerFindWood() {
           dim.runCommand(`scoreboard players reset "${TASK_WOOD}" todo`);
           dim.runCommand(`scoreboard players set "§a✔ ${TASK_WOOD}" todo 0`);
           player.sendMessage(`§aTask done: ${TASK_WOOD}! Took a lot for the first step..`);
-          dim.runCommand(`playsound random.orb @a`);
+          player.playSound("random.orb");
         });
       }
     }

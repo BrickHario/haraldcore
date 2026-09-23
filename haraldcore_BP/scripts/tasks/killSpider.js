@@ -12,7 +12,7 @@ export function registerKillSpieder() {
       dim.runCommand(`scoreboard players reset "${TASK_SPIDER}" todo`);
       dim.runCommand(`scoreboard players set "§a✔ ${TASK_SPIDER}" todo 0`);
       killer.sendMessage(`§aTask done: ${TASK_SPIDER}! I hate spiders!`);
-      dim.runCommand(`playsound random.orb @a`);
+      player.playSound("random.orb");
     });
   });
 };

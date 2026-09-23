@@ -36,7 +36,7 @@ export function registerGetBoat() {
           dim.runCommand(`scoreboard players reset "${TASK_BOAT}" todo`);
           dim.runCommand(`scoreboard players set "§a✔ ${TASK_BOAT}" todo 0`);
           player.sendMessage(`§aTask done: ${TASK_BOAT}!`);
-          dim.runCommand(`playsound random.orb @a`);
+          player.playSound("random.orb");
         });
       }
     }

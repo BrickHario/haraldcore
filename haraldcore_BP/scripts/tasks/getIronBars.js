@@ -29,7 +29,7 @@ export function registerGetIronBars() {
           dim.runCommand(`scoreboard players reset "${TASK_IRON_BARS}" todo`);
           dim.runCommand(`scoreboard players set "§a✔ ${TASK_IRON_BARS}" todo 0`);
           player.sendMessage(`§aTask done: ${TASK_IRON_BARS}!`);
-          dim.runCommand(`playsound random.orb @a`);
+          player.playSound("random.orb");
         });
       }
     }

@@ -27,7 +27,10 @@ export function registerFirework() {
 
       for (const task of ALL_TASKS) {
         try {
-          const result = dim.runCommand(`scoreboard players test "${task}" todo 1 *`);
+          const result = dim.runCommand(
+            `scoreboard players test "${task}" todo 1 *`
+          );
+
           if (result.successCount > 0) {
             allDone = false;
             break;
@@ -43,8 +46,9 @@ export function registerFirework() {
 
         system.run(() => {
           player.sendMessage("§bWell done! Fireworks for you!");
-          world.sendMessage(`§aYou all completed HaraldCore!`);
-          dim.runCommand(`playsound note.flute @a`);
+          world.sendMessage("§aYou all completed HaraldCore!");
+
+          player.playSound("note.flute");
 
           const { x, y, z } = player.location;
 
