@@ -6,8 +6,6 @@ export function registerHeal() {
   const HEAL_ITEMS = [
     "minecraft:golden_apple",
     "minecraft:enchanted_golden_apple",
-    "minecraft:honey_bottle",
-    "minecraft:potion",
   ];
 
   let completionQueued = false;
