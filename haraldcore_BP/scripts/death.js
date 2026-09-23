@@ -6,7 +6,11 @@ export function registerDeath() {
   const TIMER_KEY = "haraldcore:playedTicks";
   const HALF_KEY = "haraldcore:halfNotified";
   const FINAL_KEY = "haraldcore:finalNotified";
-  const BURN_KEY = "haraldcore:burnStarted";
+
+  const POISON_KEY = "haraldcore:poisonStarted";
+
+  const LEGACY_BURN_KEY = "haraldcore:burnStarted";
+
   const WON_KEY = "haraldcore:challengeWon";
 
   const ALL_TASKS = [
@@ -28,14 +32,15 @@ export function registerDeath() {
   let notifiedHalf = false;
   let notifiedFinal = false;
 
-  let burnStarted = false;
+  let poisonStarted = false;
   let challengeWon = false;
 
   let initialized = false;
-  let burnLoopStarted = false;
+  let poisonLoopStarted = false;
 
   function getCompletedTaskCount() {
-    const todo = world.scoreboard.getObjective("todo");
+    const todo =
+      world.scoreboard.getObjective("todo");
 
     if (!todo) {
       return 0;
@@ -45,7 +50,11 @@ export function registerDeath() {
 
     for (const task of ALL_TASKS) {
       try {
-        if (todo.hasParticipant(`§a✔ ${task}`)) {
+        if (
+          todo.hasParticipant(
+            `§a✔ ${task}`
+          )
+        ) {
           completed++;
         }
       } catch (_) {}
@@ -55,13 +64,18 @@ export function registerDeath() {
   }
 
   function allTasksCompleted() {
-    return getCompletedTaskCount() >= ALL_TASKS.length;
+    return (
+      getCompletedTaskCount() >=
+      ALL_TASKS.length
+    );
   }
 
   function getPlayedTicks() {
     if (!initialized) {
       const saved =
-        world.getDynamicProperty(TIMER_KEY);
+        world.getDynamicProperty(
+          TIMER_KEY
+        );
 
       return typeof saved === "number"
         ? saved
@@ -69,36 +83,58 @@ export function registerDeath() {
     }
 
     const currentDelta =
-      system.currentTick - lastSystemTick;
+      system.currentTick -
+      lastSystemTick;
 
-    return totalPlayedTicks +
-      Math.max(0, currentDelta);
+    return (
+      totalPlayedTicks +
+      Math.max(0, currentDelta)
+    );
   }
 
   function getPlayedDaysPrecise() {
-    return Math.round(
-      (getPlayedTicks() / TICKS_PER_DAY) * 100
-    ) / 100;
+    return (
+      Math.round(
+        (
+          getPlayedTicks() /
+          TICKS_PER_DAY
+        ) * 100
+      ) / 100
+    );
   }
 
-  function startBurnLoop() {
-    if (burnLoopStarted) {
+  function startPoisonLoop() {
+    if (poisonLoopStarted) {
       return;
     }
 
-    burnLoopStarted = true;
+    poisonLoopStarted = true;
 
     system.runInterval(() => {
-      for (const player of world.getPlayers()) {
-        player.setOnFire(10, true);
+      for (
+        const player of
+        world.getPlayers()
+      ) {
+        try {
+          player.addEffect(
+            "fatal_poison",
+            60,
+            {
+              amplifier: 1,
+              showParticles: true,
+            }
+          );
+        } catch (_) {}
       }
-    }, 20);
+    }, 5);
   }
 
   function checkChallengeTime() {
-    const playedDays = Math.floor(
-      totalPlayedTicks / TICKS_PER_DAY
-    );
+    const playedDays =
+      Math.floor(
+        totalPlayedTicks /
+        TICKS_PER_DAY
+      );
 
     if (
       playedDays >= 4 &&
@@ -115,8 +151,13 @@ export function registerDeath() {
         "§eHalftime. HURRY UP!"
       );
 
-      for (const player of world.getPlayers()) {
-        player.playSound("note.bass");
+      for (
+        const player of
+        world.getPlayers()
+      ) {
+        player.playSound(
+          "note.bass"
+        );
       }
     }
 
@@ -138,9 +179,10 @@ export function registerDeath() {
 
     if (
       playedDays >= 8 &&
-      !burnStarted &&
+      !poisonStarted &&
       !challengeWon
     ) {
+
       if (allTasksCompleted()) {
         challengeWon = true;
 
@@ -152,29 +194,36 @@ export function registerDeath() {
         return;
       }
 
-      burnStarted = true;
+      poisonStarted = true;
 
       world.setDynamicProperty(
-        BURN_KEY,
+        POISON_KEY,
+        true
+      );
+
+      world.setDynamicProperty(
+        LEGACY_BURN_KEY,
         true
       );
 
       world.sendMessage(
-        "§4Time is up. Now BURN!"
+        "§4Time is up. Now DIE!"
       );
 
-      startBurnLoop();
+      startPoisonLoop();
     }
   }
 
   world.afterEvents.entityDie.subscribe(
     event => {
 
-      const dead = event.deadEntity;
+      const dead =
+        event.deadEntity;
 
       if (
         !dead ||
-        dead.typeId !== "minecraft:player"
+        dead.typeId !==
+          "minecraft:player"
       ) {
         return;
       }
@@ -209,7 +258,9 @@ export function registerDeath() {
   system.run(() => {
 
     const savedTicks =
-      world.getDynamicProperty(TIMER_KEY);
+      world.getDynamicProperty(
+        TIMER_KEY
+      );
 
     totalPlayedTicks =
       typeof savedTicks === "number"
@@ -217,24 +268,48 @@ export function registerDeath() {
         : 0;
 
     notifiedHalf =
-      world.getDynamicProperty(HALF_KEY) === true;
+      world.getDynamicProperty(
+        HALF_KEY
+      ) === true;
 
     notifiedFinal =
-      world.getDynamicProperty(FINAL_KEY) === true;
+      world.getDynamicProperty(
+        FINAL_KEY
+      ) === true;
 
-    burnStarted =
-      world.getDynamicProperty(BURN_KEY) === true;
+    const savedPoison =
+      world.getDynamicProperty(
+        POISON_KEY
+      ) === true;
+
+    const oldBurn =
+      world.getDynamicProperty(
+        LEGACY_BURN_KEY
+      ) === true;
+
+    poisonStarted =
+      savedPoison || oldBurn;
 
     challengeWon =
-      world.getDynamicProperty(WON_KEY) === true;
+      world.getDynamicProperty(
+        WON_KEY
+      ) === true;
 
     lastSystemTick =
       system.currentTick;
 
     initialized = true;
 
-    if (burnStarted) {
-      startBurnLoop();
+    if (
+      poisonStarted &&
+      !challengeWon
+    ) {
+      world.setDynamicProperty(
+        POISON_KEY,
+        true
+      );
+
+      startPoisonLoop();
     }
 
     system.runInterval(() => {
@@ -246,9 +321,11 @@ export function registerDeath() {
         now - lastSystemTick;
 
       if (delta > 0) {
-        totalPlayedTicks += delta;
+        totalPlayedTicks +=
+          delta;
 
-        lastSystemTick = now;
+        lastSystemTick =
+          now;
 
         world.setDynamicProperty(
           TIMER_KEY,

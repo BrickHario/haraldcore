@@ -12,7 +12,7 @@ export function registerRules() {
     try { dim.runCommand('scoreboard players set "No regeneration" rules 4'); } catch (_) {}
     try { dim.runCommand('scoreboard players set "No drops" rules 3'); } catch (_) {}
     try { dim.runCommand('scoreboard players set "No sleep" rules 2'); } catch (_) {}
-    try { dim.runCommand('scoreboard players set "Move or Burn" rules 1'); } catch (_) {}
+    try { dim.runCommand('scoreboard players set "Move or Die" rules 1'); } catch (_) {}
 
     try {
       dim.runCommand("scoreboard objectives setdisplay sidebar rules descending");
