@@ -8,3 +8,4 @@ gamerule spawnradius 700
 gamerule doEntityDrops false
 gamerule doMobLoot false
 gamerule doTileDrops false
+gamerule showtags false

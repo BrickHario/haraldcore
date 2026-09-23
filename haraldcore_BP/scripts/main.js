@@ -2,6 +2,8 @@ import { registerAfkBurn } from "./afkBurn.js";
 import { registerDailyHeal } from "./heal.js";
 import { registerRules } from "./uiRules.js";
 import { registerUITasks } from "./uiTasks.js";
+import { registerChecklistUI } from "./uiChecklist.js";
+import { registerTaskBook } from "./taskBook.js";
 
 import { registerFindWood } from "./tasks/getWood.js";
 import { registerKillZombie } from "./tasks/killZombie.js";
@@ -23,6 +25,8 @@ registerAfkBurn();
 registerDailyHeal();
 registerRules();
 registerUITasks();
+registerChecklistUI();
+registerTaskBook();
 
 registerGetBoat();
 registerGetIronBars();

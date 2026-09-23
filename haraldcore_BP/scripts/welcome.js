@@ -3,7 +3,6 @@ import { world, system } from "@minecraft/server";
 export const registerWelcome = () => {
 world.afterEvents.playerSpawn.subscribe(event => {
   const player = event.player;
-  const dim = player.dimension;
 
   if (event.initialSpawn) {
     system.runTimeout(() => {
@@ -19,7 +18,7 @@ world.afterEvents.playerSpawn.subscribe(event => {
       }, 120);
 
       system.runTimeout(() => {
-        player.sendMessage("§aAnd finish together all TASKS written in your game menu!");
+        player.sendMessage("§aAnd finish all TASKS from the Task Book!");
       }, 180);
 
       system.runTimeout(() => {
