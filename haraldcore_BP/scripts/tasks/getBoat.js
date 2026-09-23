@@ -3,14 +3,18 @@ import { world, system } from "@minecraft/server";
 export function registerGetBoat() {
   const TASK_BOAT = "Craft a boat";
 
-  const BOAT_TYPES = [
-    "minecraft:oak_boat",
-    "minecraft:spruce_boat",
-    "minecraft:birch_boat",
-    "minecraft:jungle_boat",
-    "minecraft:acacia_boat",
-    "minecraft:dark_oak_boat",
-  ];
+const BOAT_TYPES = [
+  "minecraft:oak_boat",
+  "minecraft:spruce_boat",
+  "minecraft:birch_boat",
+  "minecraft:jungle_boat",
+  "minecraft:acacia_boat",
+  "minecraft:dark_oak_boat",
+  "minecraft:mangrove_boat",
+  "minecraft:cherry_boat",
+  "minecraft:pale_oak_boat",
+  "minecraft:bamboo_raft",
+];
 
   let completionQueued = false;
 

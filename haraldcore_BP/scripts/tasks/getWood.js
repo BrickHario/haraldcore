@@ -3,14 +3,18 @@ import { world, system } from "@minecraft/server";
 export function registerFindWood() {
   const TASK_WOOD = "Find wood";
 
-  const WOOD_TYPES = [
-    "minecraft:oak_planks",
-    "minecraft:spruce_planks",
-    "minecraft:birch_planks",
-    "minecraft:jungle_planks",
-    "minecraft:acacia_planks",
-    "minecraft:dark_oak_planks",
-  ];
+const CHEST_BOAT_TYPES = [
+  "minecraft:oak_chest_boat",
+  "minecraft:spruce_chest_boat",
+  "minecraft:birch_chest_boat",
+  "minecraft:jungle_chest_boat",
+  "minecraft:acacia_chest_boat",
+  "minecraft:dark_oak_chest_boat",
+  "minecraft:mangrove_chest_boat",
+  "minecraft:cherry_chest_boat",
+  "minecraft:pale_oak_chest_boat",
+  "minecraft:bamboo_chest_raft",
+];
 
   let completionQueued = false;
 
