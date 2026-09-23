@@ -133,7 +133,7 @@ export async function showHaraldChecklist(
     const form =
       new ActionFormData()
         .title(
-          "§6§lHARALDCORE TASKS"
+          "§8§lHARALDCORE TASKS"
         )
 
         .header(
