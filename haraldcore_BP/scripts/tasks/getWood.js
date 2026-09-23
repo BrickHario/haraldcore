@@ -12,33 +12,59 @@ export function registerFindWood() {
     "minecraft:dark_oak_planks",
   ];
 
-  const woodDoneFor = new Set();
+  let completionQueued = false;
 
   function playerHasWood(player) {
     const invComp = player.getComponent("minecraft:inventory");
     if (!invComp) return false;
+
     const inv = invComp.container;
     for (let i = 0; i < inv.size; i++) {
       const item = inv.getItem(i);
       if (item && WOOD_TYPES.includes(item.typeId)) return true;
     }
+
     return false;
   }
 
+  function taskAlreadyDone() {
+    const todo = world.scoreboard.getObjective("todo");
+    if (!todo) return false;
+
+    try {
+      return todo.hasParticipant(`§a✔ ${TASK_WOOD}`);
+    } catch (_) {
+      return false;
+    }
+  }
+
   system.runInterval(() => {
-    const dim = world.getDimension("overworld");
+    if (!world.scoreboard.getObjective("todo")) return;
+    if (taskAlreadyDone() || completionQueued) return;
+
     for (const player of world.getPlayers()) {
-      const pid = player.id ?? player.name;
-      if (woodDoneFor.has(pid)) continue;
-      if (playerHasWood(player)) {
-        woodDoneFor.add(pid);
-        system.run(() => {
-          dim.runCommand(`scoreboard players reset "${TASK_WOOD}" todo`);
-          dim.runCommand(`scoreboard players set "§a✔ ${TASK_WOOD}" todo 0`);
-          player.sendMessage(`§aTask done: ${TASK_WOOD}! Took a lot for the first step..`);
-          player.playSound("random.orb");
-        });
-      }
+      if (!playerHasWood(player)) continue;
+
+      completionQueued = true;
+
+      system.run(() => {
+        const dim = world.getDimension("overworld");
+
+        if (taskAlreadyDone()) {
+          completionQueued = false;
+          return;
+        }
+
+        dim.runCommand(`scoreboard players reset "${TASK_WOOD}" todo`);
+        dim.runCommand(`scoreboard players set "§a✔ ${TASK_WOOD}" todo 0`);
+
+        player.sendMessage(`§aTask done: ${TASK_WOOD}! Took a lot for the first step..`);
+        player.playSound("random.orb");
+
+        completionQueued = false;
+      });
+
+      break;
     }
   }, 80);
 }

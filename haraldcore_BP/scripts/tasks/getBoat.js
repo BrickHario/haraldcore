@@ -12,33 +12,59 @@ export function registerGetBoat() {
     "minecraft:dark_oak_boat",
   ];
 
-  const boatDoneFor = new Set();
+  let completionQueued = false;
 
   function playerHasBoat(player) {
     const invComp = player.getComponent("minecraft:inventory");
     if (!invComp) return false;
+
     const inv = invComp.container;
     for (let i = 0; i < inv.size; i++) {
       const item = inv.getItem(i);
       if (item && BOAT_TYPES.includes(item.typeId)) return true;
     }
+
     return false;
   }
 
+  function taskAlreadyDone() {
+    const todo = world.scoreboard.getObjective("todo");
+    if (!todo) return false;
+
+    try {
+      return todo.hasParticipant(`§a✔ ${TASK_BOAT}`);
+    } catch (_) {
+      return false;
+    }
+  }
+
   system.runInterval(() => {
-    const dim = world.getDimension("overworld");
+    if (!world.scoreboard.getObjective("todo")) return;
+    if (taskAlreadyDone() || completionQueued) return;
+
     for (const player of world.getPlayers()) {
-      const pid = player.id ?? player.name;
-      if (boatDoneFor.has(pid)) continue;
-      if (playerHasBoat(player)) {
-        boatDoneFor.add(pid);
-        system.run(() => {
-          dim.runCommand(`scoreboard players reset "${TASK_BOAT}" todo`);
-          dim.runCommand(`scoreboard players set "§a✔ ${TASK_BOAT}" todo 0`);
-          player.sendMessage(`§aTask done: ${TASK_BOAT}!`);
-          player.playSound("random.orb");
-        });
-      }
+      if (!playerHasBoat(player)) continue;
+
+      completionQueued = true;
+
+      system.run(() => {
+        const dim = world.getDimension("overworld");
+
+        if (taskAlreadyDone()) {
+          completionQueued = false;
+          return;
+        }
+
+        dim.runCommand(`scoreboard players reset "${TASK_BOAT}" todo`);
+        dim.runCommand(`scoreboard players set "§a✔ ${TASK_BOAT}" todo 0`);
+
+        player.sendMessage(`§aTask done: ${TASK_BOAT}!`);
+        player.playSound("random.orb");
+
+        completionQueued = false;
+      });
+
+      break;
     }
   }, 80);
 }

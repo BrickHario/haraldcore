@@ -1,6 +1,10 @@
 import { world, system } from "@minecraft/server";
 
 export function registerFirework() {
+  const WON_KEY = "haraldcore:challengeWon";
+  const BURN_KEY = "haraldcore:burnStarted";
+  const FIREWORK_KEY = "haraldcore:fireworkDone";
+
   const ALL_TASKS = [
     "Find wood",
     "Craft a boat",
@@ -14,57 +18,80 @@ export function registerFirework() {
     "Get to nether",
   ];
 
-  const completedPlayers = new Set();
+  function allTasksCompleted() {
+    const todo = world.scoreboard.getObjective("todo");
 
-  system.runInterval(() => {
-    const dim = world.getDimension("overworld");
+    if (!todo) return false;
 
-    for (const player of world.getPlayers()) {
-      const pid = player.id ?? player.name;
-      if (completedPlayers.has(pid)) continue;
-
-      let allDone = true;
-
-      for (const task of ALL_TASKS) {
-        try {
-          const result = dim.runCommand(
-            `scoreboard players test "${task}" todo 1 *`
-          );
-
-          if (result.successCount > 0) {
-            allDone = false;
-            break;
-          }
-        } catch {
-          allDone = false;
-          break;
+    for (const task of ALL_TASKS) {
+      try {
+        if (!todo.hasParticipant(`§a✔ ${task}`)) {
+          return false;
         }
-      }
-
-      if (allDone) {
-        completedPlayers.add(pid);
-
-        system.run(() => {
-          player.sendMessage("§bWell done! Fireworks for you!");
-          world.sendMessage("§aYou all completed HaraldCore!");
-
-          player.playSound("note.flute");
-
-          const { x, y, z } = player.location;
-
-          for (let i = 0; i < 10; i++) {
-            system.runTimeout(() => {
-              const offsetX = (Math.random() - 0.5) * 6;
-              const offsetZ = (Math.random() - 0.5) * 6;
-              const height = 1 + Math.floor(Math.random() * 3);
-
-              dim.runCommand(
-                `summon minecraft:fireworks_rocket ${x + offsetX} ${y + height} ${z + offsetZ}`
-              );
-            }, i * 10);
-          }
-        });
+      } catch (_) {
+        return false;
       }
     }
+
+    return true;
+  }
+
+  function spawnFireworks(player) {
+    const dim = player.dimension;
+    const { x, y, z } = player.location;
+
+    for (let i = 0; i < 10; i++) {
+      system.runTimeout(() => {
+        if (!player.isValid) return;
+
+        const offsetX = (Math.random() - 0.5) * 6;
+        const offsetZ = (Math.random() - 0.5) * 6;
+        const height = 1 + Math.floor(Math.random() * 3);
+
+        try {
+          dim.runCommand(
+            `summon minecraft:fireworks_rocket ${x + offsetX} ${y + height} ${z + offsetZ}`
+          );
+        } catch (_) {}
+      }, i * 10);
+    }
+  }
+
+  system.runInterval(() => {
+    const burnStarted =
+      world.getDynamicProperty(BURN_KEY) === true;
+
+    if (burnStarted) {
+      return;
+    }
+
+    const fireworkDone =
+      world.getDynamicProperty(FIREWORK_KEY) === true;
+
+    if (fireworkDone) {
+      return;
+    }
+
+    if (!allTasksCompleted()) {
+      return;
+    }
+
+    world.setDynamicProperty(WON_KEY, true);
+    world.setDynamicProperty(FIREWORK_KEY, true);
+
+    world.sendMessage(
+      "§aYou all completed HaraldCore!"
+    );
+
+    for (const player of world.getPlayers()) {
+      player.sendMessage(
+        "§bWell done! Fireworks for you!"
+      );
+
+      player.playSound("note.flute");
+
+      spawnFireworks(player);
+    }
+
   }, 200);
 }

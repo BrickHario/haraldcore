@@ -1,49 +1,263 @@
 import { world, system } from "@minecraft/server";
 
 export function registerDeath() {
-  const startTick = system.currentTick;
+  const TICKS_PER_DAY = 24000;
+
+  const TIMER_KEY = "haraldcore:playedTicks";
+  const HALF_KEY = "haraldcore:halfNotified";
+  const FINAL_KEY = "haraldcore:finalNotified";
+  const BURN_KEY = "haraldcore:burnStarted";
+  const WON_KEY = "haraldcore:challengeWon";
+
+  const ALL_TASKS = [
+    "Find wood",
+    "Craft a boat",
+    "Iron bars",
+    "Kill a zombie",
+    "Kill a spider",
+    "Get a sword",
+    "Kill a cow",
+    "Get Emeralds",
+    "Get a Golden Apple",
+    "Get to nether",
+  ];
+
+  let totalPlayedTicks = 0;
+  let lastSystemTick = 0;
+
   let notifiedHalf = false;
-  let notifiedNine = false;
+  let notifiedFinal = false;
+
   let burnStarted = false;
+  let challengeWon = false;
 
-  world.afterEvents.entityDie.subscribe(event => {
-    const dead = event.deadEntity;
-    if (!dead || dead.typeId !== "minecraft:player") return;
+  let initialized = false;
+  let burnLoopStarted = false;
 
-    const playedTicks = system.currentTick - startTick;
-    const playedDays = Math.floor(playedTicks / 24000);
+  function getCompletedTaskCount() {
+    const todo = world.scoreboard.getObjective("todo");
 
-    system.run(() => {
-      dead.runCommand(`title @s title §cYou survived ${playedDays} day(s)!`);
-      world.sendMessage(`§e${dead.name} survived ${playedDays} day(s)!`);
-    });
-  });
-
-  system.runInterval(() => {
-    const playedTicks = system.currentTick - startTick;
-    const playedDays = Math.floor(playedTicks / 24000);
-    const dim = world.getDimension
-
-    if (playedDays >= 4 && !notifiedHalf) {
-      notifiedHalf = true;
-      world.sendMessage("§eHalftime. HURRY UP!");
-      dim.runCommand(`playsound note.bass @a`);
+    if (!todo) {
+      return 0;
     }
 
-    if (playedDays >= 7 && !notifiedNine) {
-      notifiedNine = true;
-      world.sendMessage("§cFinal day. Prepare to DIE!");
-    }
+    let completed = 0;
 
-    if (playedDays >= 8 && !burnStarted) {
-      burnStarted = true;
-      world.sendMessage("§4Time is up. Now BURN!");
-
-      system.runInterval(() => {
-        for (const player of world.getPlayers()) {
-          player.setOnFire(10, true);
+    for (const task of ALL_TASKS) {
+      try {
+        if (todo.hasParticipant(`§a✔ ${task}`)) {
+          completed++;
         }
-      }, 20);
+      } catch (_) {}
     }
-  }, 200);
+
+    return completed;
+  }
+
+  function allTasksCompleted() {
+    return getCompletedTaskCount() >= ALL_TASKS.length;
+  }
+
+  function getPlayedTicks() {
+    if (!initialized) {
+      const saved =
+        world.getDynamicProperty(TIMER_KEY);
+
+      return typeof saved === "number"
+        ? saved
+        : 0;
+    }
+
+    const currentDelta =
+      system.currentTick - lastSystemTick;
+
+    return totalPlayedTicks +
+      Math.max(0, currentDelta);
+  }
+
+  function getPlayedDaysPrecise() {
+    return Math.round(
+      (getPlayedTicks() / TICKS_PER_DAY) * 100
+    ) / 100;
+  }
+
+  function startBurnLoop() {
+    if (burnLoopStarted) {
+      return;
+    }
+
+    burnLoopStarted = true;
+
+    system.runInterval(() => {
+      for (const player of world.getPlayers()) {
+        player.setOnFire(10, true);
+      }
+    }, 20);
+  }
+
+  function checkChallengeTime() {
+    const playedDays = Math.floor(
+      totalPlayedTicks / TICKS_PER_DAY
+    );
+
+    if (
+      playedDays >= 4 &&
+      !notifiedHalf
+    ) {
+      notifiedHalf = true;
+
+      world.setDynamicProperty(
+        HALF_KEY,
+        true
+      );
+
+      world.sendMessage(
+        "§eHalftime. HURRY UP!"
+      );
+
+      for (const player of world.getPlayers()) {
+        player.playSound("note.bass");
+      }
+    }
+
+    if (
+      playedDays >= 7 &&
+      !notifiedFinal
+    ) {
+      notifiedFinal = true;
+
+      world.setDynamicProperty(
+        FINAL_KEY,
+        true
+      );
+
+      world.sendMessage(
+        "§cFinal day. Prepare to DIE!"
+      );
+    }
+
+    if (
+      playedDays >= 8 &&
+      !burnStarted &&
+      !challengeWon
+    ) {
+      if (allTasksCompleted()) {
+        challengeWon = true;
+
+        world.setDynamicProperty(
+          WON_KEY,
+          true
+        );
+
+        return;
+      }
+
+      burnStarted = true;
+
+      world.setDynamicProperty(
+        BURN_KEY,
+        true
+      );
+
+      world.sendMessage(
+        "§4Time is up. Now BURN!"
+      );
+
+      startBurnLoop();
+    }
+  }
+
+  world.afterEvents.entityDie.subscribe(
+    event => {
+
+      const dead = event.deadEntity;
+
+      if (
+        !dead ||
+        dead.typeId !== "minecraft:player"
+      ) {
+        return;
+      }
+
+      const playedDays =
+        getPlayedDaysPrecise();
+
+      const completedTasks =
+        getCompletedTaskCount();
+
+      system.run(() => {
+
+        dead.runCommand(
+          `title @s title §c${playedDays} Days`
+        );
+
+        dead.runCommand(
+          `title @s subtitle §e${completedTasks}/10 Tasks`
+        );
+
+        dead.sendMessage(
+          `§cYou survived §f${playedDays} §cdays and completed §e${completedTasks}/10 §ctasks.`
+        );
+
+        world.sendMessage(
+          `§e${dead.name} survived ${playedDays} day(s) with ${completedTasks}/10 tasks completed!`
+        );
+      });
+    }
+  );
+
+  system.run(() => {
+
+    const savedTicks =
+      world.getDynamicProperty(TIMER_KEY);
+
+    totalPlayedTicks =
+      typeof savedTicks === "number"
+        ? savedTicks
+        : 0;
+
+    notifiedHalf =
+      world.getDynamicProperty(HALF_KEY) === true;
+
+    notifiedFinal =
+      world.getDynamicProperty(FINAL_KEY) === true;
+
+    burnStarted =
+      world.getDynamicProperty(BURN_KEY) === true;
+
+    challengeWon =
+      world.getDynamicProperty(WON_KEY) === true;
+
+    lastSystemTick =
+      system.currentTick;
+
+    initialized = true;
+
+    if (burnStarted) {
+      startBurnLoop();
+    }
+
+    system.runInterval(() => {
+
+      const now =
+        system.currentTick;
+
+      const delta =
+        now - lastSystemTick;
+
+      if (delta > 0) {
+        totalPlayedTicks += delta;
+
+        lastSystemTick = now;
+
+        world.setDynamicProperty(
+          TIMER_KEY,
+          totalPlayedTicks
+        );
+      }
+
+      checkChallengeTime();
+
+    }, 20);
+  });
 }
