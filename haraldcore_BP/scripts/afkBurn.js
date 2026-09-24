@@ -11,7 +11,7 @@ const TIMER_KEY =
   "haraldcore:playedTicks";
 
 const TICKS_PER_DAY =
-  240;
+  24000;
 
 
 /*

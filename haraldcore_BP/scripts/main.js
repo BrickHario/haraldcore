@@ -27,6 +27,8 @@ import {
 import {
   registerFinalStorm
 } from "./finalStorm.js";
+import { registerNoProgressPunishment } from "./noProgressPunishment.js";
+import { registerNightScares } from "./nightScares.js";
 
 registerWelcome();
 
@@ -39,6 +41,8 @@ registerTaskBook();
 registerImmortality();
 registerStats();
 registerFinalStorm();
+registerNoProgressPunishment();
+registerNightScares();
 
 registerGetBoat();
 registerGetIronBars();
