@@ -1,7 +1,7 @@
 import { world, system } from "@minecraft/server";
 
 export function registerDeath() {
-  const TICKS_PER_DAY = 24000;
+  const TICKS_PER_DAY = 240;
 
   const TIMER_KEY = "haraldcore:playedTicks";
   const HALF_KEY = "haraldcore:halfNotified";
@@ -312,29 +312,51 @@ export function registerDeath() {
       startPoisonLoop();
     }
 
-    system.runInterval(() => {
+system.runInterval(() => {
 
-      const now =
-        system.currentTick;
+  challengeWon =
+    world.getDynamicProperty(
+      WON_KEY
+    ) === true;
 
-      const delta =
-        now - lastSystemTick;
+  if (challengeWon) {
 
-      if (delta > 0) {
-        totalPlayedTicks +=
-          delta;
+    lastSystemTick =
+      system.currentTick;
 
-        lastSystemTick =
-          now;
+    return;
+  }
 
-        world.setDynamicProperty(
-          TIMER_KEY,
-          totalPlayedTicks
-        );
-      }
 
-      checkChallengeTime();
+  const now =
+    system.currentTick;
 
-    }, 20);
+
+  const delta =
+    now -
+    lastSystemTick;
+
+
+  if (delta > 0) {
+
+    totalPlayedTicks +=
+      delta;
+
+
+    lastSystemTick =
+      now;
+
+
+    world.setDynamicProperty(
+      TIMER_KEY,
+      totalPlayedTicks
+    );
+
+  }
+
+
+  checkChallengeTime();
+
+}, 20);
   });
 }

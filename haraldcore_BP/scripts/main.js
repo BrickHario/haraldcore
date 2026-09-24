@@ -18,6 +18,12 @@ import { registerGoNether } from "./tasks/goNether.js";
 import { registerFirework} from "./firework.js";
 import { registerWelcome } from "./welcome.js";
 import { registerDeath } from "./death.js";
+import {
+  registerImmortality
+} from "./immortality.js";
+import {
+  registerStats
+} from "./stats.js";
 
 registerWelcome();
 
@@ -27,6 +33,8 @@ registerRules();
 registerUITasks();
 registerChecklistUI();
 registerTaskBook();
+registerImmortality();
+registerStats();
 
 registerGetBoat();
 registerGetIronBars();
