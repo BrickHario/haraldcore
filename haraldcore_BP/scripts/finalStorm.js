@@ -14,7 +14,11 @@ const BURN_KEY =
   "haraldcore:burnStarted";
 
 
-const TICKS_PER_DAY = 240;
+const TICKS_PER_DAY =
+  24000;
+
+const RAIN_DAY_START =
+  TICKS_PER_DAY * 6;
 
 const FINAL_DAY_START =
   TICKS_PER_DAY * 7;
@@ -22,47 +26,43 @@ const FINAL_DAY_START =
 const FINAL_DAY_END =
   TICKS_PER_DAY * 8;
 
+let weatherState =
+  "none";
 
-let stormActive = false;
+let lightningCountdown =
+  5;
 
-/*
- * Countdown bis zum nächsten
- * extra Blitz.
- *
- * Wird beim Start neu gesetzt.
- */
-let lightningCountdown = 5;
+function randomInt(
+  min,
+  max
+) {
 
-
-/*
- * Zufällige ganze Zahl.
- */
-function randomInt(min, max) {
   return (
     Math.floor(
       Math.random() *
       (max - min + 1)
     ) + min
   );
+
 }
 
-
-/*
- * Prüft, ob wir uns aktuell
- * am achten / letzten Tag befinden.
- */
-function isFinalDay() {
+function getPlayedTicks() {
 
   const ticks =
     world.getDynamicProperty(
       TIMER_KEY
     );
 
-  const playedTicks =
+
+  return (
     typeof ticks === "number"
       ? ticks
-      : 0;
+      : 0
+  );
 
+}
+
+function challengeIsActive() {
 
   const won =
     world.getDynamicProperty(
@@ -76,28 +76,76 @@ function isFinalDay() {
     ) === true;
 
 
-  /*
-   * Nach Sieg oder Ablauf
-   * kein Final-Day-Sturm mehr.
-   */
+  return (
+    !won &&
+    !failed
+  );
+
+}
+
+function isRainDay() {
+
   if (
-    won ||
-    failed
+    !challengeIsActive()
   ) {
     return false;
   }
 
 
+  const ticks =
+    getPlayedTicks();
+
+
   return (
-    playedTicks >= FINAL_DAY_START &&
-    playedTicks < FINAL_DAY_END
+    ticks >= RAIN_DAY_START &&
+    ticks < FINAL_DAY_START
   );
+
 }
 
+function isFinalDay() {
 
-/*
- * Gewitter starten / auffrischen.
- */
+  if (
+    !challengeIsActive()
+  ) {
+    return false;
+  }
+
+
+  const ticks =
+    getPlayedTicks();
+
+
+  return (
+    ticks >= FINAL_DAY_START &&
+    ticks < FINAL_DAY_END
+  );
+
+}
+
+function startRain() {
+
+  try {
+
+    const overworld =
+      world.getDimension(
+        "overworld"
+      );
+
+    overworld.runCommand(
+      "weather rain 1200"
+    );
+
+  } catch (error) {
+
+    console.warn(
+      `[HaraldCore] Could not start rain: ${error}`
+    );
+
+  }
+
+}
+
 function startThunderstorm() {
 
   try {
@@ -108,13 +156,6 @@ function startThunderstorm() {
       );
 
 
-    /*
-     * 1200 Ticks = 60 Sekunden.
-     *
-     * Wird regelmäßig erneuert,
-     * damit der Sturm garantiert
-     * bestehen bleibt.
-     */
     overworld.runCommand(
       "weather thunder 1200"
     );
@@ -126,13 +167,10 @@ function startThunderstorm() {
     );
 
   }
+
 }
 
-
-/*
- * Sturm nach Ende wieder entfernen.
- */
-function stopThunderstorm() {
+function clearWeather() {
 
   try {
 
@@ -150,87 +188,38 @@ function stopThunderstorm() {
 
 }
 
+function announceRainDay() {
 
-/*
- * Extra Blitz in der Nähe
- * eines Spielers.
- */
-function strikeNearPlayer(player) {
-
-  /*
-   * Wetter funktioniert nur sinnvoll
-   * in der Overworld.
-   */
-  if (
-    player.dimension.id !==
-    "minecraft:overworld"
+  for (
+    const player
+    of world.getAllPlayers()
   ) {
-    return;
-  }
 
+    try {
 
-  const location =
-    player.location;
+      player.onScreenDisplay
+        .setTitle(
+          "§8§lDAY 7",
+          {
+            subtitle:
+              "§7THE SKY IS TURNING DARK.",
+            fadeInDuration: 10,
+            stayDuration: 40,
+            fadeOutDuration: 20,
+          }
+        );
 
-
-  /*
-   * Blitz soll NICHT direkt
-   * auf dem Spieler einschlagen.
-   *
-   * Entfernung:
-   * ungefähr 7–16 Blöcke.
-   */
-  const angle =
-    Math.random() *
-    Math.PI *
-    2;
-
-
-  const distance =
-    7 +
-    Math.random() *
-    9;
-
-
-  const strikeLocation = {
-
-    x:
-      location.x +
-      Math.cos(angle) *
-      distance,
-
-    y:
-      location.y,
-
-    z:
-      location.z +
-      Math.sin(angle) *
-      distance,
-
-  };
-
-
-  try {
-
-    player.dimension.spawnEntity(
-      "minecraft:lightning_bolt",
-      strikeLocation
-    );
-
-  } catch (error) {
-
-    console.warn(
-      `[HaraldCore] Lightning error: ${error}`
-    );
+    } catch (_) {}
 
   }
+
+
+  world.sendMessage(
+    "§8§lDAY 7 §r§7The sky is turning dark."
+  );
+
 }
 
-
-/*
- * Optionaler Start-Effekt,
- * wenn Tag 8 erreicht wird.
- */
 function announceFinalStorm() {
 
   for (
@@ -272,118 +261,175 @@ function announceFinalStorm() {
 
 }
 
+function strikeNearPlayer(
+  player
+) {
+  if (
+    player.dimension.id !==
+    "minecraft:overworld"
+  ) {
+    return;
+  }
 
-/*
- * ======================================================
- * REGISTER
- * ======================================================
- */
+
+  const location =
+    player.location;
+
+  const angle =
+    Math.random() *
+    Math.PI *
+    2;
+
+  const distance =
+    7 +
+    Math.random() *
+    9;
+
+
+  const strikeLocation = {
+
+    x:
+      location.x +
+      Math.cos(angle) *
+      distance,
+
+    y:
+      location.y,
+
+    z:
+      location.z +
+      Math.sin(angle) *
+      distance,
+
+  };
+
+
+  try {
+
+    player.dimension.spawnEntity(
+      "minecraft:lightning_bolt",
+      strikeLocation
+    );
+
+  } catch (error) {
+
+    console.warn(
+      `[HaraldCore] Lightning error: ${error}`
+    );
+
+  }
+
+}
 
 export function registerFinalStorm() {
 
-  /*
-   * --------------------------------------------------
-   * STORM CONTROL
-   * --------------------------------------------------
-   *
-   * Alle 10 Sekunden kontrollieren.
-   */
   system.runInterval(() => {
 
-    const finalDay =
-      isFinalDay();
-
-
-    /*
-     * Final Day beginnt.
-     */
     if (
-      finalDay &&
-      !stormActive
+      isFinalDay()
     ) {
 
-      stormActive = true;
+      if (
+        weatherState !==
+        "storm"
+      ) {
 
-      lightningCountdown =
-        randomInt(
-          5,
-          10
-        );
+        weatherState =
+          "storm";
 
+
+        lightningCountdown =
+          randomInt(
+            5,
+            10
+          );
+
+
+        startThunderstorm();
+
+
+        announceFinalStorm();
+
+
+        return;
+
+      }
 
       startThunderstorm();
 
-      announceFinalStorm();
 
       return;
+
     }
 
-
-    /*
-     * Sturm während Tag 8
-     * regelmäßig erneuern.
-     */
     if (
-      finalDay &&
-      stormActive
+      isRainDay()
     ) {
 
-      startThunderstorm();
+      if (
+        weatherState !==
+        "rain"
+      ) {
+
+        weatherState =
+          "rain";
+
+
+        startRain();
+
+
+        announceRainDay();
+
+
+        return;
+
+      }
+
+      startRain();
+
 
       return;
+
     }
 
-
-    /*
-     * Final Day vorbei
-     * oder Challenge gewonnen.
-     */
     if (
-      !finalDay &&
-      stormActive
+      weatherState !==
+      "none"
     ) {
 
-      stormActive = false;
+      weatherState =
+        "none";
 
-      stopThunderstorm();
+
+      clearWeather();
 
     }
 
   }, 200);
 
-
-
-  /*
-   * --------------------------------------------------
-   * EXTRA LIGHTNING
-   * --------------------------------------------------
-   *
-   * Jede Sekunde prüfen.
-   */
   system.runInterval(() => {
 
     if (
-      !stormActive ||
+      weatherState !==
+        "storm" ||
       !isFinalDay()
     ) {
+
       return;
+
     }
 
 
     lightningCountdown--;
 
-
     if (
       lightningCountdown > 0
     ) {
+
       return;
+
     }
 
-
-    /*
-     * Nächster Blitz wieder
-     * in 5–12 Sekunden.
-     */
     lightningCountdown =
       randomInt(
         5,
@@ -398,16 +444,11 @@ export function registerFinalStorm() {
     if (
       players.length === 0
     ) {
+
       return;
+
     }
 
-
-    /*
-     * Einen zufälligen Spieler auswählen.
-     *
-     * Dadurch gibt es nicht bei 10 Spielern
-     * gleichzeitig 10 Blitze.
-     */
     const player =
       players[
         Math.floor(
