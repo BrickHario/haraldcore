@@ -50,7 +50,7 @@ export function registerGetEmeralds() {
         dim.runCommand(`scoreboard players reset "${TASK_EMERALDS}" todo`);
         dim.runCommand(`scoreboard players set "§a✔ ${TASK_EMERALDS}" todo 0`);
 
-        player.sendMessage(`§aTask done: ${TASK_EMERALDS}!`);
+        player.sendMessage(`§aTask done: ${TASK_EMERALDS}! Rich millionaire!`);
         player.playSound("random.orb");
 
         completionQueued = false;

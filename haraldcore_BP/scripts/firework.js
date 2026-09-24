@@ -589,12 +589,12 @@ export function registerFirework() {
 
 
     world.sendMessage(
-      "§aYou all completed HaraldCore!"
+      "§aTHE CURSE IS BROKEN."
     );
 
 
     world.sendMessage(
-      "§dYou are now IMMORTAL!"
+      "§dYou escaped HaraldCore."
     );
 
 
@@ -604,7 +604,7 @@ export function registerFirework() {
     ) {
 
       player.sendMessage(
-        "§bWell done! Fireworks for you!"
+        "§bYou are free. You are IMMORTAL."
       );
 
 

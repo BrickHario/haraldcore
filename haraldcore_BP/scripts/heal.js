@@ -101,7 +101,7 @@ export function registerDailyHeal() {
         healPlayerBy(player, 2);
 
         player.sendMessage(
-          "§aNew day, New luck."
+          "§cAnother day. Less time."
         );
 
         player.playSound("note.pling");

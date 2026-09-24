@@ -16,36 +16,36 @@ export const registerWelcome = () => {
     system.runTimeout(() => {
       if (!player.isValid) return;
 
-      player.sendMessage("§aWelcome to HaraldCore!");
+      player.sendMessage("§4You have been cursed by HaraldCore!");
       player.playSound("note.pling");
 
       system.runTimeout(() => {
         if (player.isValid) {
-          player.sendMessage("§aHow HARALD likes to play Minecraft..");
+          player.sendMessage("§cNo drops. No sleep. No mercy.");
         }
       }, 60);
 
       system.runTimeout(() => {
         if (player.isValid) {
-          player.sendMessage("§aSurvive with the HARDCORE RULES!");
+          player.sendMessage("§cNo regeneration. Keep moving.");
         }
       }, 120);
 
       system.runTimeout(() => {
         if (player.isValid) {
-          player.sendMessage("§aAnd finish all TASKS from the Task Book!");
+          player.sendMessage("§6Complete every TASK in the Task Book to survive.");
         }
       }, 180);
 
       system.runTimeout(() => {
         if (player.isValid) {
-          player.sendMessage("§a8 DAYS. Your time starts now.");
+          player.sendMessage("§6You have 8 DAYS before the curse kills you.");
         }
       }, 240);
 
       system.runTimeout(() => {
         if (player.isValid) {
-          player.sendMessage("§aGOOD LUCK..");
+          player.sendMessage("§aEscape HaraldCore... if you can. GOOD LUCK.");
 
           // Erst NACH erfolgreicher Welcome-Sequenz speichern.
           player.setDynamicProperty(WELCOME_KEY, true);

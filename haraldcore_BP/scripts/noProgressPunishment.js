@@ -198,7 +198,7 @@ function punishPlayers(
 
 
   world.sendMessage(
-    `§c${noProgressDays} day${noProgressDays === 1 ? "" : "s"} without completing a task.`
+    `§c${noProgressDays} day${noProgressDays === 1 ? "" : "s"} wasted without a task completed..`
   );
 
 

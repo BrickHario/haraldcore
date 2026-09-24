@@ -357,12 +357,19 @@ export async function showHaraldChecklist(
           text
         )
 
+        .divider()
+
+
+        .label(
+          "§6HaraldCore has cursed you: no drops, no sleep, no natural regeneration, and if you stop moving for too long, the curse will poison you while you fight to survive in Hardcore Mode. §4You have only 8 days to complete every task before the curse kills you, while each night grows darker and more terrifying. Cpan you survive HaraldCore?"
+        )
+
 
         .divider()
 
 
         .label(
-          "§eTip: Finding chests might help.."
+          "§eTip: Finding chests might help.. STOP READING, YOU WILL BURN!"
         );
 
 
