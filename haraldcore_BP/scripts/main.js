@@ -24,6 +24,9 @@ import {
 import {
   registerStats
 } from "./stats.js";
+import {
+  registerFinalStorm
+} from "./finalStorm.js";
 
 registerWelcome();
 
@@ -35,6 +38,7 @@ registerChecklistUI();
 registerTaskBook();
 registerImmortality();
 registerStats();
+registerFinalStorm();
 
 registerGetBoat();
 registerGetIronBars();

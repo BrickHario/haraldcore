@@ -1,7 +1,7 @@
 import { world, system } from "@minecraft/server";
 
 export function registerDailyHeal() {
-  const TICKS_PER_DAY = 240;
+  const TICKS_PER_DAY = 24000;
 
   const TIMER_KEY = "haraldcore:playedTicks";
   const LAST_HEAL_KEY = "haraldcore:lastHealDay";

@@ -24,7 +24,7 @@ const TASKS = [
 ];
 
 
-const TICKS_PER_DAY = 240;
+const TICKS_PER_DAY = 24000;
 
 const TIMER_KEY =
   "haraldcore:playedTicks";
