@@ -13,6 +13,8 @@ export function registerDeath() {
 
   const WON_KEY = "haraldcore:challengeWon";
 
+  const DAMAGE_KEY = "haraldcore:damageTaken";
+
   const ALL_TASKS = [
     "Find wood",
     "Craft a boat",
@@ -100,6 +102,118 @@ export function registerDeath() {
           TICKS_PER_DAY
         ) * 100
       ) / 100
+    );
+  }
+
+  function getHeartsLost(player) {
+    try {
+
+      const damage =
+        player.getDynamicProperty(
+          DAMAGE_KEY
+        );
+
+      const totalDamage =
+        typeof damage === "number"
+          ? damage
+          : 0;
+
+      return (
+        Math.round(
+          (
+            totalDamage /
+            2
+          ) * 10
+        ) / 10
+      );
+
+    } catch (_) {
+
+      return 0;
+
+    }
+  }
+
+  /*
+   * WIN = 7000 + Speed bis 2000 + Health bis 1000 = max 10000
+   * DEATH = Tasks + Survival + Health = max 6499
+   */
+  function calculateHaraldScore(
+    completedTasks,
+    playedDays,
+    heartsLost,
+    won
+  ) {
+
+    if (won) {
+
+      const speedScore =
+        Math.max(
+          0,
+          Math.min(
+            2000,
+            (
+              8 -
+              playedDays
+            ) * 250
+          )
+        );
+
+      const healthScore =
+        Math.max(
+          0,
+          Math.min(
+            1000,
+            1000 -
+            heartsLost * 20
+          )
+        );
+
+      return Math.min(
+        10000,
+        Math.max(
+          7000,
+          Math.round(
+            7000 +
+            speedScore +
+            healthScore
+          )
+        )
+      );
+    }
+
+    const taskScore =
+      completedTasks * 350;
+
+    const survivalScore =
+      Math.max(
+        0,
+        Math.min(
+          2400,
+          playedDays * 300
+        )
+      );
+
+    const healthScore =
+      Math.max(
+        0,
+        Math.min(
+          1000,
+          playedDays * 125 -
+          heartsLost * 10
+        )
+      );
+
+    return Math.min(
+      6499,
+      Math.max(
+        0,
+        Math.round(
+          taskScore +
+          survivalScore +
+          healthScore
+        )
+      )
     );
   }
 
@@ -234,22 +348,51 @@ export function registerDeath() {
       const completedTasks =
         getCompletedTaskCount();
 
+      const heartsLost =
+        getHeartsLost(
+          dead
+        );
+
+      const haraldScore =
+        calculateHaraldScore(
+          completedTasks,
+          playedDays,
+          heartsLost,
+          false
+        );
+
       system.run(() => {
 
-        dead.runCommand(
-          `title @s title §c${playedDays} Days`
-        );
+        try {
+          dead.runCommand(
+            `title @s title §c${playedDays} Days`
+          );
+        } catch (_) {}
 
-        dead.runCommand(
-          `title @s subtitle §e${completedTasks}/10 Tasks`
-        );
+        try {
+          dead.runCommand(
+            `title @s subtitle §e${completedTasks}/10 Tasks §8| §6Score: §e${haraldScore}`
+          );
+        } catch (_) {}
 
-        dead.sendMessage(
-          `§cYou survived §f${playedDays} §cdays and completed §e${completedTasks}/10 §ctasks.`
-        );
+        try {
+          dead.sendMessage(
+            `§cYou survived §f${playedDays} §cdays and completed §e${completedTasks}/10 §ctasks.`
+          );
+        } catch (_) {}
+
+        try {
+          dead.sendMessage(
+            `§6§lScore: §e${haraldScore}`
+          );
+        } catch (_) {}
 
         world.sendMessage(
           `§e${dead.name} survived ${playedDays} day(s) with ${completedTasks}/10 tasks completed!`
+        );
+
+        world.sendMessage(
+          `§6Score: §e${haraldScore}`
         );
       });
     }
@@ -312,51 +455,50 @@ export function registerDeath() {
       startPoisonLoop();
     }
 
-system.runInterval(() => {
+    system.runInterval(() => {
 
-  challengeWon =
-    world.getDynamicProperty(
-      WON_KEY
-    ) === true;
+      challengeWon =
+        world.getDynamicProperty(
+          WON_KEY
+        ) === true;
 
-  if (challengeWon) {
+      if (challengeWon) {
 
-    lastSystemTick =
-      system.currentTick;
+        lastSystemTick =
+          system.currentTick;
 
-    return;
-  }
-
-
-  const now =
-    system.currentTick;
+        return;
+      }
 
 
-  const delta =
-    now -
-    lastSystemTick;
+      const now =
+        system.currentTick;
 
 
-  if (delta > 0) {
-
-    totalPlayedTicks +=
-      delta;
-
-
-    lastSystemTick =
-      now;
+      const delta =
+        now -
+        lastSystemTick;
 
 
-    world.setDynamicProperty(
-      TIMER_KEY,
-      totalPlayedTicks
-    );
+      if (delta > 0) {
 
-  }
+        totalPlayedTicks +=
+          delta;
 
 
-  checkChallengeTime();
+        lastSystemTick =
+          now;
 
-}, 20);
+
+        world.setDynamicProperty(
+          TIMER_KEY,
+          totalPlayedTicks
+        );
+      }
+
+
+      checkChallengeTime();
+
+    }, 20);
   });
 }

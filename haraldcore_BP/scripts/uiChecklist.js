@@ -124,6 +124,7 @@ function getPlayedTicks() {
   );
 }
 
+
 function getPlayedDaysPrecise() {
 
   const ticks =
@@ -176,6 +177,7 @@ function getDayColor(day) {
   return "§c";
 }
 
+
 function getHeartsLost(player) {
 
   const damage =
@@ -193,10 +195,101 @@ function getHeartsLost(player) {
   const hearts =
     totalDamage / 2;
 
+
   return (
     Math.round(
       hearts * 10
     ) / 10
+  );
+}
+
+
+/*
+ * WIN = 7000 + Speed bis 2000 + Health bis 1000 = max 10000
+ * DEATH = Tasks + Survival + Health = max 6499
+ */
+function calculateHaraldScore(
+  completedTasks,
+  playedDays,
+  heartsLost,
+  won
+) {
+
+  if (won) {
+
+    const speedScore =
+      Math.max(
+        0,
+        Math.min(
+          2000,
+          (
+            8 -
+            playedDays
+          ) * 250
+        )
+      );
+
+
+    const healthScore =
+      Math.max(
+        0,
+        Math.min(
+          1000,
+          1000 -
+          heartsLost * 20
+        )
+      );
+
+
+    return Math.min(
+      10000,
+      Math.max(
+        7000,
+        Math.round(
+          7000 +
+          speedScore +
+          healthScore
+        )
+      )
+    );
+  }
+
+
+  const taskScore =
+    completedTasks * 350;
+
+
+  const survivalScore =
+    Math.max(
+      0,
+      Math.min(
+        2400,
+        playedDays * 300
+      )
+    );
+
+
+  const healthScore =
+    Math.max(
+      0,
+      Math.min(
+        1000,
+        playedDays * 125 -
+        heartsLost * 10
+      )
+    );
+
+
+  return Math.min(
+    6499,
+    Math.max(
+      0,
+      Math.round(
+        taskScore +
+        survivalScore +
+        healthScore
+      )
+    )
   );
 }
 
@@ -252,14 +345,25 @@ export async function showHaraldChecklist(
     const won =
       challengeWon();
 
+
     if (won) {
 
       const playedDays =
         getPlayedDaysPrecise();
 
+
       const heartsLost =
         getHeartsLost(
           player
+        );
+
+
+      const haraldScore =
+        calculateHaraldScore(
+          doneCount,
+          playedDays,
+          heartsLost,
+          true
         );
 
 
@@ -271,14 +375,12 @@ export async function showHaraldChecklist(
           )
 
           .header(
-            "§a§lCONGRATULATION!"
+            "§a§lCONGRATS!"
           )
-
 
           .label(
             "§fYou completed HaraldCore!"
           )
-
 
           .divider()
 
@@ -286,16 +388,17 @@ export async function showHaraldChecklist(
             "§d§lYOUR STATS"
           )
 
-
           .label(
             `§7Time: §f${playedDays} Days`
           )
-
 
           .label(
             `§7Hearts lost: §c${heartsLost} ❤`
           )
 
+          .label(
+            `§7Harald Score: §6§l${haraldScore}`
+          )
 
           .divider()
 
@@ -303,14 +406,11 @@ export async function showHaraldChecklist(
             `§a§lTASKS §7(${doneCount}/${TASKS.length})`
           )
 
-
           .label(
             text
           )
 
-
           .divider()
-
 
           .label(
             "§a§lThanks for playing!"
@@ -324,6 +424,7 @@ export async function showHaraldChecklist(
 
       return;
     }
+
 
     const currentDay =
       getCurrentDay();
@@ -342,16 +443,13 @@ export async function showHaraldChecklist(
           "§8§lHARALDCORE TASKS"
         )
 
-
         .header(
           `${dayColor}§lDAY ${currentDay}/8`
         )
 
-
         .header(
           `§6§lTASKS §7(${doneCount}/${TASKS.length})`
         )
-
 
         .label(
           text
@@ -359,17 +457,14 @@ export async function showHaraldChecklist(
 
         .divider()
 
-
         .label(
-          "§6HaraldCore has cursed you: no drops, no sleep, no natural regeneration, and if you stop moving for too long, the curse will poison you while you fight to survive in Hardcore Mode. §4You have only 8 days to complete every task before the curse kills you, while each night grows darker and more terrifying. Cpan you survive HaraldCore?"
+          "§6HaraldCore has cursed you: no drops, no sleep, no natural regeneration, and if you stop moving for too long, the curse will poison you while you fight to survive in Hardcore Mode. §4You have only 8 days to complete every task before the curse kills you, while each night grows darker and more terrifying. Can you survive HaraldCore?"
         )
-
 
         .divider()
 
-
         .label(
-          "§eTip: Finding chests might help.. STOP READING, YOU WILL BURN!"
+          "§eTip: Finding chests might help.. STOP READING NOW, YOU WILL DIE!"
         );
 
 
