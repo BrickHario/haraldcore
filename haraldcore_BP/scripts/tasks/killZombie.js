@@ -3,45 +3,111 @@ import { world, system } from "@minecraft/server";
 export function registerKillZombie() {
   const TASK_ZOMBIE = "Kill a zombie";
 
+  const ZOMBIE_TYPES = [
+    "minecraft:zombie",
+    "minecraft:husk",
+    "minecraft:drowned",
+    "minecraft:zombie_villager",
+    "minecraft:zombie_villager_v2",
+    "minecraft:zombie_pigman",
+    "minecraft:zombie_horse",
+    "minecraft:zombie_nautilus",
+  ];
+
   let completionQueued = false;
 
   function taskAlreadyDone() {
-    const todo = world.scoreboard.getObjective("todo");
+    const todo =
+      world.scoreboard.getObjective(
+        "todo"
+      );
+
     if (!todo) return false;
 
     try {
-      return todo.hasParticipant(`§a✔ ${TASK_ZOMBIE}`);
+      return todo.hasParticipant(
+        `§a✔ ${TASK_ZOMBIE}`
+      );
     } catch (_) {
       return false;
     }
   }
 
-  world.afterEvents.entityDie.subscribe(event => {
-    if (event.deadEntity?.typeId !== "minecraft:zombie") return;
+  world.afterEvents.entityDie.subscribe(
+    event => {
 
-    const killer = event.damageSource?.damagingEntity;
-    if (!killer || killer.typeId !== "minecraft:player") return;
+      const deadType =
+        event.deadEntity?.typeId;
 
-    if (!world.scoreboard.getObjective("todo")) return;
-    if (taskAlreadyDone() || completionQueued) return;
-
-    completionQueued = true;
-
-    system.run(() => {
-      const dim = world.getDimension("overworld");
-
-      if (taskAlreadyDone()) {
-        completionQueued = false;
+      if (
+        !deadType ||
+        !ZOMBIE_TYPES.includes(
+          deadType
+        )
+      ) {
         return;
       }
 
-      dim.runCommand(`scoreboard players reset "${TASK_ZOMBIE}" todo`);
-      dim.runCommand(`scoreboard players set "§a✔ ${TASK_ZOMBIE}" todo 0`);
+      const killer =
+        event.damageSource?.damagingEntity;
 
-      killer.sendMessage(`§aTask done: ${TASK_ZOMBIE}! Zombie VS Plants?`);
-      killer.playSound("random.orb");
+      if (
+        !killer ||
+        killer.typeId !==
+          "minecraft:player"
+      ) {
+        return;
+      }
 
-      completionQueued = false;
-    });
-  });
+      if (
+        !world.scoreboard.getObjective(
+          "todo"
+        )
+      ) {
+        return;
+      }
+
+      if (
+        taskAlreadyDone() ||
+        completionQueued
+      ) {
+        return;
+      }
+
+      completionQueued = true;
+
+      system.run(() => {
+
+        const dim =
+          world.getDimension(
+            "overworld"
+          );
+
+        if (
+          taskAlreadyDone()
+        ) {
+          completionQueued = false;
+          return;
+        }
+
+        dim.runCommand(
+          `scoreboard players reset "${TASK_ZOMBIE}" todo`
+        );
+
+        dim.runCommand(
+          `scoreboard players set "§a✔ ${TASK_ZOMBIE}" todo 0`
+        );
+
+        killer.sendMessage(
+          `§aTask done: ${TASK_ZOMBIE}! Zombie VS Plants?`
+        );
+
+        killer.playSound(
+          "random.orb"
+        );
+
+        completionQueued = false;
+      });
+    }
+  );
 }
