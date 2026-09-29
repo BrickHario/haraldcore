@@ -35,6 +35,9 @@ const WON_KEY =
 const DAMAGE_KEY =
   "haraldcore:damageTaken";
 
+const VILLAGE_COUNT_KEY =
+  "haraldcore:villageCount";
+
 
 const openChecklistPlayers =
   new Set();
@@ -200,6 +203,22 @@ function getHeartsLost(player) {
     Math.round(
       hearts * 10
     ) / 10
+  );
+}
+
+
+function getVillageCount() {
+
+  const count =
+    world.getDynamicProperty(
+      VILLAGE_COUNT_KEY
+    );
+
+
+  return (
+    typeof count === "number"
+      ? count
+      : 0
   );
 }
 
@@ -400,6 +419,10 @@ export async function showHaraldChecklist(
         );
 
 
+      const villageCount =
+        getVillageCount();
+
+
       const haraldScore =
         calculateHaraldScore(
           doneCount,
@@ -447,6 +470,10 @@ export async function showHaraldChecklist(
 
           .label(
             `§7Hearts lost: §c${heartsLost} ❤`
+          )
+
+          .label(
+            `§7Village Count: §f${villageCount}`
           )
 
           .header(
