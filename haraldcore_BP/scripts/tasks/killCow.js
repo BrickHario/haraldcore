@@ -3,6 +3,11 @@ import { world, system } from "@minecraft/server";
 export function registerKillCow() {
   const TASK_COW = "Kill a cow";
 
+  const COW_TYPES = [
+    "minecraft:cow",
+    "minecraft:mooshroom",
+  ];
+
   let completionQueued = false;
 
   function taskAlreadyDone() {
@@ -17,7 +22,8 @@ export function registerKillCow() {
   }
 
   world.afterEvents.entityDie.subscribe(event => {
-    if (event.deadEntity?.typeId !== "minecraft:cow") return;
+    const deadType = event.deadEntity?.typeId;
+    if (!deadType || !COW_TYPES.includes(deadType)) return;
 
     const killer = event.damageSource?.damagingEntity;
     if (!killer || killer.typeId !== "minecraft:player") return;
