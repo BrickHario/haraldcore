@@ -5,7 +5,11 @@ export function registerRules() {
     const dim = world.getDimension("overworld");
 
     try {
-      dim.runCommand("scoreboard objectives add rules dummy Rules");
+      dim.runCommand("scoreboard objectives remove rules");
+    } catch (_) {}
+
+    try {
+      dim.runCommand('scoreboard objectives add rules dummy "HaraldCore Rules"');
     } catch (_) {}
 
     try { dim.runCommand('scoreboard players set "Hardcore Mode" rules 5'); } catch (_) {}
@@ -15,7 +19,7 @@ export function registerRules() {
     try { dim.runCommand('scoreboard players set "Move or Die" rules 1'); } catch (_) {}
 
     try {
-      dim.runCommand("scoreboard objectives setdisplay sidebar rules descending");
+      dim.runCommand("scoreboard objectives setdisplay sidebar rules ascending");
     } catch (_) {}
   }, 60);
 }
