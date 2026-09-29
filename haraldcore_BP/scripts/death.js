@@ -40,6 +40,8 @@ export function registerDeath() {
   let initialized = false;
   let poisonLoopStarted = false;
 
+  let winStatsAnnounced = false;
+
   function getCompletedTaskCount() {
     const todo =
       world.scoreboard.getObjective("todo");
@@ -107,7 +109,6 @@ export function registerDeath() {
 
   function getHeartsLost(player) {
     try {
-
       const damage =
         player.getDynamicProperty(
           DAMAGE_KEY
@@ -128,9 +129,7 @@ export function registerDeath() {
       );
 
     } catch (_) {
-
       return 0;
-
     }
   }
 
@@ -219,7 +218,6 @@ export function registerDeath() {
   function formatHaraldScore(
     score
   ) {
-
     return Math.max(
       0,
       Math.min(
@@ -232,6 +230,111 @@ export function registerDeath() {
         4,
         "0"
       );
+  }
+
+  function getScoreStars(
+    score,
+    completedTasks
+  ) {
+    if (
+      completedTasks < 10
+    ) {
+      return "";
+    }
+
+    const bronze =
+      "§4§l★";
+
+    const silver =
+      score >= 8500
+        ? "§f§l★"
+        : "§8§l☆";
+
+    const gold =
+      score >= 9250
+        ? "§e§l★"
+        : "§8§l☆";
+
+    return (
+      `${bronze}${silver}${gold}`
+    );
+  }
+
+  function announceWinStats() {
+    if (winStatsAnnounced) {
+      return;
+    }
+
+    winStatsAnnounced = true;
+
+    const playedDays =
+      getPlayedDaysPrecise();
+
+    const completedTasks =
+      getCompletedTaskCount();
+
+    const players = [
+      ...world.getPlayers()
+    ];
+
+    for (const winner of players) {
+      const heartsLost =
+        getHeartsLost(
+          winner
+        );
+
+      const haraldScore =
+        calculateHaraldScore(
+          completedTasks,
+          playedDays,
+          heartsLost
+        );
+
+      const formattedScore =
+        formatHaraldScore(
+          haraldScore
+        );
+
+      const scoreStars =
+        getScoreStars(
+          haraldScore,
+          completedTasks
+        );
+
+      const scoreText =
+        `§6§lScore: §e${formattedScore} §r${scoreStars}`;
+
+      try {
+        winner.sendMessage(
+          `§aYou completed HaraldCore in §f${playedDays} §adays with §e${completedTasks}/10 §atasks!`
+        );
+
+        winner.sendMessage(
+          scoreText
+        );
+      } catch (_) {}
+
+      for (
+        const player of players
+      ) {
+        if (
+          player.id ===
+          winner.id
+        ) {
+          continue;
+        }
+
+        try {
+          player.sendMessage(
+            `§e${winner.name} §acompleted HaraldCore in §f${playedDays} §adays with §e${completedTasks}/10 §atasks!`
+          );
+
+          player.sendMessage(
+            scoreText
+          );
+        } catch (_) {}
+      }
+    }
   }
 
   function startPoisonLoop() {
@@ -313,7 +416,6 @@ export function registerDeath() {
       !poisonStarted &&
       !challengeWon
     ) {
-
       if (allTasksCompleted()) {
         challengeWon = true;
 
@@ -321,6 +423,8 @@ export function registerDeath() {
           WON_KEY,
           true
         );
+
+        announceWinStats();
 
         return;
       }
@@ -345,82 +449,98 @@ export function registerDeath() {
     }
   }
 
-  world.afterEvents.entityDie.subscribe(
-    event => {
+world.afterEvents.entityDie.subscribe(event => {
+  const dead = event.deadEntity;
 
-      const dead =
-        event.deadEntity;
+  if (
+    !dead ||
+    dead.typeId !== "minecraft:player"
+  ) {
+    return;
+  }
 
-      if (
-        !dead ||
-        dead.typeId !==
-          "minecraft:player"
-      ) {
-        return;
-      }
+  const playedDays =
+    getPlayedDaysPrecise();
 
-      const playedDays =
-        getPlayedDaysPrecise();
+  const completedTasks =
+    getCompletedTaskCount();
 
-      const completedTasks =
-        getCompletedTaskCount();
+  const heartsLost =
+    getHeartsLost(dead);
 
-      const heartsLost =
-        getHeartsLost(
-          dead
-        );
+  const haraldScore =
+    calculateHaraldScore(
+      completedTasks,
+      playedDays,
+      heartsLost
+    );
 
-      const haraldScore =
-        calculateHaraldScore(
-          completedTasks,
-          playedDays,
-          heartsLost
-        );
+  const formattedScore =
+    formatHaraldScore(
+      haraldScore
+    );
 
-      const formattedScore =
-        formatHaraldScore(
-          haraldScore
-        );
+  const scoreStars =
+    getScoreStars(
+      haraldScore,
+      completedTasks
+    );
 
-      system.run(() => {
+  const scoreText =
+    scoreStars
+      ? `§6§lScore: §e${formattedScore} §r${scoreStars}`
+      : `§6§lScore: §e${formattedScore}`;
 
-        try {
-          dead.runCommand(
-            `title @s title §c${playedDays} Days`
-          );
-        } catch (_) {}
+  function showDeathStats() {
+    try {
+      dead.runCommand(
+        "title @s times 0 6000 0"
+      );
 
-        try {
-          dead.runCommand(
-            `title @s subtitle §e${completedTasks}/10 Tasks §8| §6Score: §e${formattedScore}`
-          );
-        } catch (_) {}
+      dead.runCommand(
+        `title @s title §c${playedDays} Days`
+      );
 
-        try {
-          dead.sendMessage(
-            `§cYou survived §f${playedDays} §cdays and completed §e${completedTasks}/10 §ctasks.`
-          );
-        } catch (_) {}
+      dead.runCommand(
+        `title @s subtitle §e${completedTasks}/10 Tasks §8| §6Score: §e${formattedScore}`
+      );
+    } catch (_) {}
+  }
 
-        try {
-          dead.sendMessage(
-            `§6§lScore: §e${formattedScore}`
-          );
-        } catch (_) {}
-
-        world.sendMessage(
-          `§e${dead.name} survived ${playedDays} day(s) with ${completedTasks}/10 tasks completed!`
-        );
-
-        world.sendMessage(
-          `§6Score: §e${formattedScore}`
-        );
-      });
-    }
-  );
+  showDeathStats();
 
   system.run(() => {
+    showDeathStats();
 
+    try {
+      dead.sendMessage(
+        `§cYou died! You survived §f${playedDays} §cdays and completed §e${completedTasks}/10 §ctasks.`
+      );
+
+      dead.sendMessage(
+        scoreText
+      );
+    } catch (_) {}
+
+    for (const player of world.getPlayers()) {
+      if (player.id === dead.id) {
+        continue;
+      }
+
+      try {
+        player.sendMessage(
+          `§e${dead.name} §cdied after §f${playedDays} §cdays with §e${completedTasks}/10 §ctasks completed!`
+        );
+
+        player.sendMessage(
+          scoreText
+        );
+      } catch (_) {}
+    }
+  });
+});
+
+  system.run(() => {
     const savedTicks =
       world.getDynamicProperty(
         TIMER_KEY
@@ -465,6 +585,12 @@ export function registerDeath() {
     initialized = true;
 
     if (
+      challengeWon
+    ) {
+      winStatsAnnounced = true;
+    }
+
+    if (
       poisonStarted &&
       !challengeWon
     ) {
@@ -477,46 +603,49 @@ export function registerDeath() {
     }
 
     system.runInterval(() => {
-
-      challengeWon =
+      const wonNow =
         world.getDynamicProperty(
           WON_KEY
         ) === true;
 
-      if (challengeWon) {
+      if (
+        wonNow &&
+        !challengeWon
+      ) {
+        challengeWon = true;
 
+        announceWinStats();
+      } else {
+        challengeWon =
+          wonNow;
+      }
+
+      if (challengeWon) {
         lastSystemTick =
           system.currentTick;
 
         return;
       }
 
-
       const now =
         system.currentTick;
-
 
       const delta =
         now -
         lastSystemTick;
 
-
       if (delta > 0) {
-
         totalPlayedTicks +=
           delta;
 
-
         lastSystemTick =
           now;
-
 
         world.setDynamicProperty(
           TIMER_KEY,
           totalPlayedTicks
         );
       }
-
 
       checkChallengeTime();
 

@@ -312,6 +312,30 @@ function formatHaraldScore(
 }
 
 
+function getScoreStars(
+  score
+) {
+
+  const bronze =
+    "§4§l★";
+
+  const silver =
+    score >= 8500
+      ? "§f§l★"
+      : "§8§l☆";
+
+  const gold =
+    score >= 9250
+      ? "§e§l★"
+      : "§8§l☆";
+
+
+  return (
+    `${bronze}${silver}${gold}`
+  );
+}
+
+
 function challengeWon() {
 
   return (
@@ -390,6 +414,12 @@ export async function showHaraldChecklist(
         );
 
 
+      const scoreStars =
+        getScoreStars(
+          haraldScore
+        );
+
+
       const form =
         new ActionFormData()
 
@@ -419,8 +449,8 @@ export async function showHaraldChecklist(
             `§7Hearts lost: §c${heartsLost} ❤`
           )
 
-          .label(
-            `§7Harald Score: §6§l${formattedScore}`
+          .header(
+            `§7SCORE: §6§l${formattedScore} §r${scoreStars}`
           )
 
           .divider()
@@ -437,6 +467,10 @@ export async function showHaraldChecklist(
 
           .label(
             "§a§lThanks for playing!"
+          )
+
+          .label(
+            "§e§l- BY BRICKHARIO"
           );
 
 
