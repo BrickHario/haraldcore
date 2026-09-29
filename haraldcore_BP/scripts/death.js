@@ -135,17 +135,16 @@ export function registerDeath() {
   }
 
   /*
-   * WIN = 7000 + Speed bis 2000 + Health bis 1000 = max 10000
-   * DEATH = Tasks + Survival + Health = max 6499
+   * 10/10 = 7000 + Speed bis 2000 + Health bis 1000 = max 9999
+   * 0-9/10 = Tasks + Survival + Health = max 6499
    */
   function calculateHaraldScore(
     completedTasks,
     playedDays,
-    heartsLost,
-    won
+    heartsLost
   ) {
 
-    if (won) {
+    if (completedTasks >= 10) {
 
       const speedScore =
         Math.max(
@@ -170,7 +169,7 @@ export function registerDeath() {
         );
 
       return Math.min(
-        10000,
+        9999,
         Math.max(
           7000,
           Math.round(
@@ -215,6 +214,24 @@ export function registerDeath() {
         )
       )
     );
+  }
+
+  function formatHaraldScore(
+    score
+  ) {
+
+    return Math.max(
+      0,
+      Math.min(
+        9999,
+        Math.round(score)
+      )
+    )
+      .toString()
+      .padStart(
+        4,
+        "0"
+      );
   }
 
   function startPoisonLoop() {
@@ -357,8 +374,12 @@ export function registerDeath() {
         calculateHaraldScore(
           completedTasks,
           playedDays,
-          heartsLost,
-          false
+          heartsLost
+        );
+
+      const formattedScore =
+        formatHaraldScore(
+          haraldScore
         );
 
       system.run(() => {
@@ -371,7 +392,7 @@ export function registerDeath() {
 
         try {
           dead.runCommand(
-            `title @s subtitle §e${completedTasks}/10 Tasks §8| §6Score: §e${haraldScore}`
+            `title @s subtitle §e${completedTasks}/10 Tasks §8| §6Score: §e${formattedScore}`
           );
         } catch (_) {}
 
@@ -383,7 +404,7 @@ export function registerDeath() {
 
         try {
           dead.sendMessage(
-            `§6§lScore: §e${haraldScore}`
+            `§6§lScore: §e${formattedScore}`
           );
         } catch (_) {}
 
@@ -392,7 +413,7 @@ export function registerDeath() {
         );
 
         world.sendMessage(
-          `§6Score: §e${haraldScore}`
+          `§6Score: §e${formattedScore}`
         );
       });
     }

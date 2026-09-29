@@ -205,17 +205,16 @@ function getHeartsLost(player) {
 
 
 /*
- * WIN = 7000 + Speed bis 2000 + Health bis 1000 = max 10000
- * DEATH = Tasks + Survival + Health = max 6499
+ * 10/10 = 7000 + Speed bis 2000 + Health bis 1000 = max 9999
+ * 0-9/10 = Tasks + Survival + Health = max 6499
  */
 function calculateHaraldScore(
   completedTasks,
   playedDays,
-  heartsLost,
-  won
+  heartsLost
 ) {
 
-  if (won) {
+  if (completedTasks >= 10) {
 
     const speedScore =
       Math.max(
@@ -242,7 +241,7 @@ function calculateHaraldScore(
 
 
     return Math.min(
-      10000,
+      9999,
       Math.max(
         7000,
         Math.round(
@@ -291,6 +290,25 @@ function calculateHaraldScore(
       )
     )
   );
+}
+
+
+function formatHaraldScore(
+  score
+) {
+
+  return Math.max(
+    0,
+    Math.min(
+      9999,
+      Math.round(score)
+    )
+  )
+    .toString()
+    .padStart(
+      4,
+      "0"
+    );
 }
 
 
@@ -362,8 +380,13 @@ export async function showHaraldChecklist(
         calculateHaraldScore(
           doneCount,
           playedDays,
-          heartsLost,
-          true
+          heartsLost
+        );
+
+
+      const formattedScore =
+        formatHaraldScore(
+          haraldScore
         );
 
 
@@ -397,7 +420,7 @@ export async function showHaraldChecklist(
           )
 
           .label(
-            `§7Harald Score: §6§l${haraldScore}`
+            `§7Harald Score: §6§l${formattedScore}`
           )
 
           .divider()
