@@ -29,6 +29,7 @@ import {
 } from "./finalStorm.js";
 import { registerNoProgressPunishment } from "./noProgressPunishment.js";
 import { registerNightScares } from "./nightScares.js";
+import { registerVillageCurse } from "./villageCurse.js";
 
 registerWelcome();
 
@@ -43,6 +44,7 @@ registerStats();
 registerFinalStorm();
 registerNoProgressPunishment();
 registerNightScares();
+registerVillageCurse();
 
 registerGetBoat();
 registerGetIronBars();
