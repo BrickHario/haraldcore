@@ -1,3 +1,4 @@
+
 import { world, system } from "@minecraft/server";
 
 export function registerGetSword() {
@@ -61,8 +62,13 @@ export function registerGetSword() {
         const personalTasks = player.getDynamicProperty("haraldcore:personalTasks") ?? 0;
         player.setDynamicProperty("haraldcore:personalTasks", personalTasks + 1);
 
-        world.sendMessage(`§aTask done: ${TASK_SWORD}! Kill them all!`);
         for (const onlinePlayer of world.getPlayers()) {
+          if (onlinePlayer.id === player.id) {
+            onlinePlayer.sendMessage(`§aTask done by you: ${TASK_SWORD}! Kill them all!`);
+          } else {
+            onlinePlayer.sendMessage(`§aTask done by ${player.name}: ${TASK_SWORD}! Kill them all!`);
+          }
+
           onlinePlayer.playSound("random.orb");
         }
 

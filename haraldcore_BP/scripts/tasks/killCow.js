@@ -1,3 +1,4 @@
+
 import { world, system } from "@minecraft/server";
 
 export function registerKillCow() {
@@ -47,8 +48,13 @@ export function registerKillCow() {
       const personalTasks = killer.getDynamicProperty("haraldcore:personalTasks") ?? 0;
       killer.setDynamicProperty("haraldcore:personalTasks", personalTasks + 1);
 
-      world.sendMessage(`§aTask done: ${TASK_COW}! Who needs milk?`);
       for (const onlinePlayer of world.getPlayers()) {
+        if (onlinePlayer.id === killer.id) {
+          onlinePlayer.sendMessage(`§aTask done by you: ${TASK_COW}! Who needs milk?`);
+        } else {
+          onlinePlayer.sendMessage(`§aTask done by ${killer.name}: ${TASK_COW}! Who needs milk?`);
+        }
+
         onlinePlayer.playSound("random.orb");
       }
 

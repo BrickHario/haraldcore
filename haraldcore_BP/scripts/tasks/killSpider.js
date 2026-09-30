@@ -1,3 +1,4 @@
+
 import { world, system } from "@minecraft/server";
 
 export function registerKillSpieder() {
@@ -11,97 +12,53 @@ export function registerKillSpieder() {
   let completionQueued = false;
 
   function taskAlreadyDone() {
-    const todo =
-      world.scoreboard.getObjective(
-        "todo"
-      );
-
+    const todo = world.scoreboard.getObjective("todo");
     if (!todo) return false;
 
     try {
-      return todo.hasParticipant(
-        `§a✔ ${TASK_SPIDER}`
-      );
+      return todo.hasParticipant(`§a✔ ${TASK_SPIDER}`);
     } catch (_) {
       return false;
     }
   }
 
-  world.afterEvents.entityDie.subscribe(
-    event => {
+  world.afterEvents.entityDie.subscribe(event => {
+    const deadType = event.deadEntity?.typeId;
+    if (!deadType || !SPIDER_TYPES.includes(deadType)) return;
 
-      const deadType =
-        event.deadEntity?.typeId;
+    const killer = event.damageSource?.damagingEntity;
+    if (!killer || killer.typeId !== "minecraft:player") return;
 
-      if (
-        !deadType ||
-        !SPIDER_TYPES.includes(
-          deadType
-        )
-      ) {
-        return;
-      }
+    if (!world.scoreboard.getObjective("todo")) return;
+    if (taskAlreadyDone() || completionQueued) return;
 
-      const killer =
-        event.damageSource?.damagingEntity;
+    completionQueued = true;
 
-      if (
-        !killer ||
-        killer.typeId !==
-          "minecraft:player"
-      ) {
-        return;
-      }
+    system.run(() => {
+      const dim = world.getDimension("overworld");
 
-      if (
-        !world.scoreboard.getObjective(
-          "todo"
-        )
-      ) {
-        return;
-      }
-
-      if (
-        taskAlreadyDone() ||
-        completionQueued
-      ) {
-        return;
-      }
-
-      completionQueued = true;
-
-      system.run(() => {
-
-        const dim =
-          world.getDimension(
-            "overworld"
-          );
-
-        if (
-          taskAlreadyDone()
-        ) {
-          completionQueued = false;
-          return;
-        }
-
-        dim.runCommand(
-          `scoreboard players reset "${TASK_SPIDER}" todo`
-        );
-
-        dim.runCommand(
-          `scoreboard players set "§a✔ ${TASK_SPIDER}" todo 0`
-        );
-
-        const personalTasks = killer.getDynamicProperty("haraldcore:personalTasks") ?? 0;
-        killer.setDynamicProperty("haraldcore:personalTasks", personalTasks + 1);
-
-        world.sendMessage(`§aTask done: ${TASK_SPIDER}! I hate spiders!`);
-        for (const onlinePlayer of world.getPlayers()) {
-          onlinePlayer.playSound("random.orb");
-        }
-
+      if (taskAlreadyDone()) {
         completionQueued = false;
-      });
-    }
-  );
+        return;
+      }
+
+      dim.runCommand(`scoreboard players reset "${TASK_SPIDER}" todo`);
+      dim.runCommand(`scoreboard players set "§a✔ ${TASK_SPIDER}" todo 0`);
+
+      const personalTasks = killer.getDynamicProperty("haraldcore:personalTasks") ?? 0;
+      killer.setDynamicProperty("haraldcore:personalTasks", personalTasks + 1);
+
+      for (const onlinePlayer of world.getPlayers()) {
+        if (onlinePlayer.id === killer.id) {
+          onlinePlayer.sendMessage(`§aTask done by you: ${TASK_SPIDER}! I hate spiders!`);
+        } else {
+          onlinePlayer.sendMessage(`§aTask done by ${killer.name}: ${TASK_SPIDER}! I hate spiders!`);
+        }
+
+        onlinePlayer.playSound("random.orb");
+      }
+
+      completionQueued = false;
+    });
+  });
 }

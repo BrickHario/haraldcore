@@ -10,6 +10,21 @@ export function registerHeal() {
 
   let completionQueued = false;
 
+  function playerHasGoldenApple(player) {
+    const invComp = player.getComponent("minecraft:inventory");
+    if (!invComp) return false;
+
+    const inv = invComp.container;
+    if (!inv) return false;
+
+    for (let i = 0; i < inv.size; i++) {
+      const item = inv.getItem(i);
+      if (item && HEAL_ITEMS.includes(item.typeId)) return true;
+    }
+
+    return false;
+  }
+
   function taskAlreadyDone() {
     const todo = world.scoreboard.getObjective("todo");
     if (!todo) return false;
@@ -21,38 +36,43 @@ export function registerHeal() {
     }
   }
 
-  world.afterEvents.itemUse.subscribe(event => {
-    const player = event.source;
-    if (!player || player.typeId !== "minecraft:player") return;
-
-    const item = event.itemStack;
-    if (!item || !HEAL_ITEMS.includes(item.typeId)) return;
-
+  system.runInterval(() => {
     if (!world.scoreboard.getObjective("todo")) return;
     if (taskAlreadyDone() || completionQueued) return;
 
-    completionQueued = true;
+    for (const player of world.getPlayers()) {
+      if (!playerHasGoldenApple(player)) continue;
 
-    system.run(() => {
-      const dim = world.getDimension("overworld");
+      completionQueued = true;
 
-      if (taskAlreadyDone()) {
+      system.run(() => {
+        const dim = world.getDimension("overworld");
+
+        if (taskAlreadyDone()) {
+          completionQueued = false;
+          return;
+        }
+
+        dim.runCommand(`scoreboard players reset "${TASK_HEAL}" todo`);
+        dim.runCommand(`scoreboard players set "§a✔ ${TASK_HEAL}" todo 0`);
+
+        const personalTasks = player.getDynamicProperty("haraldcore:personalTasks") ?? 0;
+        player.setDynamicProperty("haraldcore:personalTasks", personalTasks + 1);
+
+        for (const onlinePlayer of world.getPlayers()) {
+          if (onlinePlayer.id === player.id) {
+            onlinePlayer.sendMessage(`§aTask done by you: ${TASK_HEAL}! Maybe it can heal you?`);
+          } else {
+            onlinePlayer.sendMessage(`§aTask done by ${player.name}: ${TASK_HEAL}! Maybe it can heal you?`);
+          }
+
+          onlinePlayer.playSound("random.orb");
+        }
+
         completionQueued = false;
-        return;
-      }
+      });
 
-      dim.runCommand(`scoreboard players reset "${TASK_HEAL}" todo`);
-      dim.runCommand(`scoreboard players set "§a✔ ${TASK_HEAL}" todo 0`);
-
-      const personalTasks = player.getDynamicProperty("haraldcore:personalTasks") ?? 0;
-      player.setDynamicProperty("haraldcore:personalTasks", personalTasks + 1);
-
-      world.sendMessage(`§aTask done: ${TASK_HEAL}! Maybe it can heal you?`);
-      for (const onlinePlayer of world.getPlayers()) {
-        onlinePlayer.playSound("random.orb");
-      }
-
-      completionQueued = false;
-    });
-  });
+      break;
+    }
+  }, 80);
 }

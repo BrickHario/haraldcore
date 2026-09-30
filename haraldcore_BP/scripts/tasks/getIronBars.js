@@ -1,3 +1,4 @@
+
 import { world, system } from "@minecraft/server";
 
 export function registerGetIronBars() {
@@ -53,8 +54,13 @@ export function registerGetIronBars() {
         const personalTasks = player.getDynamicProperty("haraldcore:personalTasks") ?? 0;
         player.setDynamicProperty("haraldcore:personalTasks", personalTasks + 1);
 
-        world.sendMessage(`§aTask done: ${TASK_IRON_BARS}!`);
         for (const onlinePlayer of world.getPlayers()) {
+          if (onlinePlayer.id === player.id) {
+            onlinePlayer.sendMessage(`§aTask done by you: ${TASK_IRON_BARS}!`);
+          } else {
+            onlinePlayer.sendMessage(`§aTask done by ${player.name}: ${TASK_IRON_BARS}!`);
+          }
+
           onlinePlayer.playSound("random.orb");
         }
 

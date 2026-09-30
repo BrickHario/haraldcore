@@ -1,14 +1,12 @@
+
 import {
   world,
   system
 } from "@minecraft/server";
 
-
 const TASK_WOOD = "Find wood";
 
-
 const WOOD_TYPES = [
-
   "minecraft:oak_log",
   "minecraft:stripped_oak_log",
   "minecraft:oak_planks",
@@ -58,11 +56,9 @@ const WOOD_TYPES = [
   "minecraft:warped_planks",
 ];
 
-
 export function registerFindWood() {
 
   let completionQueued = false;
-
 
   function playerHasWood(player) {
 
@@ -75,14 +71,12 @@ export function registerFindWood() {
       return false;
     }
 
-
     const inv =
       invComp.container;
 
     if (!inv) {
       return false;
     }
-
 
     for (
       let i = 0;
@@ -103,10 +97,8 @@ export function registerFindWood() {
       }
     }
 
-
     return false;
   }
-
 
   function taskAlreadyDone() {
 
@@ -118,7 +110,6 @@ export function registerFindWood() {
     if (!todo) {
       return false;
     }
-
 
     try {
 
@@ -133,7 +124,6 @@ export function registerFindWood() {
     }
   }
 
-
   system.runInterval(() => {
 
     if (
@@ -144,7 +134,6 @@ export function registerFindWood() {
       return;
     }
 
-
     if (
       taskAlreadyDone() ||
       completionQueued
@@ -152,10 +141,9 @@ export function registerFindWood() {
       return;
     }
 
-
     for (
-      const player
-      of world.getPlayers()
+      const player of
+      world.getPlayers()
     ) {
 
       if (
@@ -164,9 +152,7 @@ export function registerFindWood() {
         continue;
       }
 
-
       completionQueued = true;
-
 
       system.run(() => {
 
@@ -177,14 +163,11 @@ export function registerFindWood() {
               "overworld"
             );
 
-
           if (
             taskAlreadyDone()
           ) {
-            completionQueued = false;
             return;
           }
-
 
           dim.runCommand(
             `scoreboard players reset "${TASK_WOOD}" todo`
@@ -194,16 +177,18 @@ export function registerFindWood() {
             `scoreboard players set "§a✔ ${TASK_WOOD}" todo 0`
           );
 
-
           const personalTasks = player.getDynamicProperty("haraldcore:personalTasks") ?? 0;
           player.setDynamicProperty("haraldcore:personalTasks", personalTasks + 1);
 
-
-          world.sendMessage(`§aTask done: ${TASK_WOOD}! Took a lot for the first step..`);
           for (const onlinePlayer of world.getPlayers()) {
+            if (onlinePlayer.id === player.id) {
+              onlinePlayer.sendMessage(`§aTask done by you: ${TASK_WOOD}! Took a lot for the first step..`);
+            } else {
+              onlinePlayer.sendMessage(`§aTask done by ${player.name}: ${TASK_WOOD}! Took a lot for the first step..`);
+            }
+
             onlinePlayer.playSound("random.orb");
           }
-
 
         } catch (error) {
 
@@ -217,7 +202,6 @@ export function registerFindWood() {
 
         }
       });
-
 
       break;
     }
