@@ -3,7 +3,6 @@ import {
   system
 } from "@minecraft/server";
 
-
 const TICKS_PER_DAY =
   24000;
 
@@ -22,7 +21,6 @@ const VILLAGE_COUNT_KEY =
 const PLAYER_RAID_KEY =
   "haraldcore:villageRaidOmen";
 
-
 const VILLAGER_SCAN_RADIUS =
   40;
 
@@ -38,7 +36,6 @@ const VILLAGE_VERTICAL_RADIUS =
 const VILLAGE_MERGE_RADIUS =
   128;
 
-
 const SCAN_INTERVAL =
   100;
 
@@ -48,7 +45,6 @@ const SCAN_MOVE_DISTANCE =
 const SCAN_MAX_WAIT =
   400;
 
-
 const RAID_OMEN_TICKS =
   600;
 
@@ -57,7 +53,6 @@ const RAID_REINFORCE_DELAY =
 
 const RAIDER_CHECK_RADIUS =
   80;
-
 
 const RAIDER_TARGETS = [
   {
@@ -93,19 +88,16 @@ const RAIDER_TARGETS = [
   },
 ];
 
-
 let villages = [];
 
 let initialized =
   false;
-
 
 const playerScanState =
   new Map();
 
 const playerVillageState =
   new Map();
-
 
 function getPlayedTicks() {
 
@@ -114,14 +106,12 @@ function getPlayedTicks() {
       TIMER_KEY
     );
 
-
   return (
     typeof ticks === "number"
       ? ticks
       : 0
   );
 }
-
 
 function challengeWon() {
 
@@ -132,14 +122,12 @@ function challengeWon() {
   );
 }
 
-
 function loadVillages() {
 
   const saved =
     world.getDynamicProperty(
       VILLAGES_KEY
     );
-
 
   if (
     typeof saved !== "string" ||
@@ -148,14 +136,12 @@ function loadVillages() {
     return [];
   }
 
-
   try {
 
     const parsed =
       JSON.parse(
         saved
       );
-
 
     return (
       Array.isArray(parsed)
@@ -170,7 +156,6 @@ function loadVillages() {
   }
 }
 
-
 function saveVillages() {
 
   try {
@@ -182,7 +167,6 @@ function saveVillages() {
       )
     );
 
-
     world.setDynamicProperty(
       VILLAGE_COUNT_KEY,
       villages.length
@@ -191,12 +175,10 @@ function saveVillages() {
   } catch (_) {}
 }
 
-
 function getNextVillageId() {
 
   let highest =
     0;
-
 
   for (
     const village of villages
@@ -213,10 +195,8 @@ function getNextVillageId() {
     }
   }
 
-
   return highest + 1;
 }
-
 
 function distanceSquared(
   a,
@@ -229,13 +209,11 @@ function distanceSquared(
   const dz =
     a.z - b.z;
 
-
   return (
     dx * dx +
     dz * dz
   );
 }
-
 
 function findVillageById(
   id
@@ -252,10 +230,8 @@ function findVillageById(
     }
   }
 
-
   return undefined;
 }
-
 
 function findKnownVillageNear(
   dimensionId,
@@ -266,13 +242,11 @@ function findKnownVillageNear(
   const maxDistance =
     radius * radius;
 
-
   let result =
     undefined;
 
   let closest =
     Infinity;
-
 
   for (
     const village of villages
@@ -285,13 +259,11 @@ function findKnownVillageNear(
       continue;
     }
 
-
     const distance =
       distanceSquared(
         location,
         village
       );
-
 
     if (
       distance <=
@@ -308,10 +280,8 @@ function findKnownVillageNear(
     }
   }
 
-
   return result;
 }
-
 
 function playerInsideVillage(
   player,
@@ -325,7 +295,6 @@ function playerInsideVillage(
     return false;
   }
 
-
   if (
     Math.abs(
       player.location.y -
@@ -335,7 +304,6 @@ function playerInsideVillage(
   ) {
     return false;
   }
-
 
   return (
     distanceSquared(
@@ -347,7 +315,6 @@ function playerInsideVillage(
   );
 }
 
-
 function getNearbyVillagers(
   dimension,
   location,
@@ -356,7 +323,6 @@ function getNearbyVillagers(
 
   const result =
     new Map();
-
 
   try {
 
@@ -374,7 +340,6 @@ function getNearbyVillagers(
           4,
       });
 
-
     for (
       const villager of villagers
     ) {
@@ -386,7 +351,6 @@ function getNearbyVillagers(
     }
 
   } catch (_) {}
-
 
   try {
 
@@ -404,7 +368,6 @@ function getNearbyVillagers(
           4,
       });
 
-
     for (
       const villager of villagers
     ) {
@@ -417,12 +380,10 @@ function getNearbyVillagers(
 
   } catch (_) {}
 
-
   return [
     ...result.values()
   ];
 }
-
 
 function getVillagerCenter(
   villagers
@@ -434,11 +395,9 @@ function getVillagerCenter(
     return undefined;
   }
 
-
   let x = 0;
   let y = 0;
   let z = 0;
-
 
   for (
     const villager of villagers
@@ -453,7 +412,6 @@ function getVillagerCenter(
     z +=
       villager.location.z;
   }
-
 
   return {
 
@@ -472,6 +430,73 @@ function getVillagerCenter(
   };
 }
 
+function hasVisitedVillage(
+  player,
+  village
+) {
+
+  try {
+
+    const saved =
+      player.getDynamicProperty(
+        "haraldcore:visitedVillages"
+      );
+
+    const visited =
+      typeof saved === "string"
+        ? JSON.parse(saved)
+        : [];
+
+    return visited.includes(
+      village.id
+    );
+
+  } catch (_) {
+
+    return false;
+
+  }
+}
+
+function markVillageVisited(
+  player,
+  village
+) {
+
+  if (
+    hasVisitedVillage(
+      player,
+      village
+    )
+  ) {
+    return;
+  }
+
+  try {
+
+    const saved =
+      player.getDynamicProperty(
+        "haraldcore:visitedVillages"
+      );
+
+    const visited =
+      typeof saved === "string"
+        ? JSON.parse(saved)
+        : [];
+
+    visited.push(
+      village.id
+    );
+
+    player.setDynamicProperty(
+      "haraldcore:visitedVillages",
+      JSON.stringify(
+        visited
+      )
+    );
+
+  } catch (_) {}
+}
 
 function registerVillage(
   player,
@@ -485,11 +510,15 @@ function registerVillage(
       VILLAGE_MERGE_RADIUS
     );
 
-
   if (existing) {
+
+    enterKnownVillage(
+      player,
+      existing
+    );
+
     return existing;
   }
-
 
   const village = {
 
@@ -525,37 +554,91 @@ function registerVillage(
 
   };
 
-
   villages.push(
     village
   );
 
-
   saveVillages();
-
 
   playerVillageState.set(
     player.id,
     village.id
   );
 
-
- try {
-
-  player.sendMessage(
-    "§aWelcome to the village. §eYour Visa expires in 1 day."
+  markVillageVisited(
+    player,
+    village
   );
 
-  player.playSound(
-    "random.levelup"
-  );
+  try {
 
-} catch (_) {}
+    player.sendMessage(
+      "§aWelcome to the village. §eYour Visa expires in 1 day."
+    );
 
+    player.playSound(
+      "random.levelup"
+    );
 
-return village;
+  } catch (_) {}
+
+  return village;
 }
 
+function enterKnownVillage(
+  player,
+  village
+) {
+
+  if (
+    playerVillageState.get(
+      player.id
+    ) === village.id
+  ) {
+    return;
+  }
+
+  playerVillageState.set(
+    player.id,
+    village.id
+  );
+
+  if (
+    !hasVisitedVillage(
+      player,
+      village
+    )
+  ) {
+
+    markVillageVisited(
+      player,
+      village
+    );
+
+    if (!village.cursed) {
+
+      try {
+
+        player.sendMessage(
+          "§eWelcome! This village was already found and your visa expires soon."
+        );
+
+        player.playSound(
+          "random.levelup"
+        );
+
+      } catch (_) {}
+    }
+  }
+
+  if (village.cursed) {
+
+    handleVillageEntry(
+      player,
+      village
+    );
+  }
+}
 
 function shouldScanPlayer(
   player
@@ -564,12 +647,10 @@ function shouldScanPlayer(
   const now =
     system.currentTick;
 
-
   const state =
     playerScanState.get(
       player.id
     );
-
 
   if (!state) {
 
@@ -592,10 +673,8 @@ function shouldScanPlayer(
       }
     );
 
-
     return true;
   }
-
 
   if (
     state.dimension !==
@@ -614,10 +693,8 @@ function shouldScanPlayer(
     state.tick =
       now;
 
-
     return true;
   }
-
 
   const dx =
     player.location.x -
@@ -626,7 +703,6 @@ function shouldScanPlayer(
   const dz =
     player.location.z -
     state.z;
-
 
   const movedEnough =
     (
@@ -638,7 +714,6 @@ function shouldScanPlayer(
       SCAN_MOVE_DISTANCE
     );
 
-
   const waitedEnough =
     (
       now -
@@ -646,15 +721,12 @@ function shouldScanPlayer(
     ) >=
     SCAN_MAX_WAIT;
 
-
   if (
     !movedEnough &&
     !waitedEnough
   ) {
-
     return false;
   }
-
 
   state.x =
     player.location.x;
@@ -665,10 +737,8 @@ function shouldScanPlayer(
   state.tick =
     now;
 
-
   return true;
 }
-
 
 function hasRaidOmen(
   player
@@ -686,7 +756,6 @@ function hasRaidOmen(
 
   }
 }
-
 
 function getRaiderCount(
   dimension,
@@ -723,7 +792,6 @@ function getRaiderCount(
   }
 }
 
-
 function getRaiderSpawnLocation(
   player
 ) {
@@ -737,7 +805,6 @@ function getRaiderSpawnLocation(
     10 +
     Math.random() *
     8;
-
 
   return {
 
@@ -758,7 +825,6 @@ function getRaiderSpawnLocation(
   };
 }
 
-
 function reinforceVillage(
   village,
   player
@@ -772,7 +838,6 @@ function reinforceVillage(
     return;
   }
 
-
   if (
     !playerInsideVillage(
       player,
@@ -782,10 +847,8 @@ function reinforceVillage(
     return;
   }
 
-
   const dimension =
     player.dimension;
-
 
   for (
     const target of
@@ -799,14 +862,12 @@ function reinforceVillage(
         target.type
       );
 
-
     const missing =
       Math.max(
         0,
         target.amount -
         existing
       );
-
 
     for (
       let i = 0;
@@ -824,7 +885,6 @@ function reinforceVillage(
             )
           );
 
-
         try {
 
           raider.addTag(
@@ -838,6 +898,30 @@ function reinforceVillage(
   }
 }
 
+function announceExpiredVisa() {
+
+  world.sendMessage(
+    "§4§lVISA EXPIRED!"
+  );
+
+  world.sendMessage(
+    "§4§lRUN! §cVILLAGE POLICE are coming!"
+  );
+
+  for (
+    const onlinePlayer of
+    world.getPlayers()
+  ) {
+
+    try {
+
+      onlinePlayer.playSound(
+        "note.bass"
+      );
+
+    } catch (_) {}
+  }
+}
 
 function startRaidOmen(
   player,
@@ -850,7 +934,6 @@ function startRaidOmen(
     return;
   }
 
-
   try {
 
     player.removeEffect(
@@ -862,7 +945,6 @@ function startRaidOmen(
     );
 
   } catch (_) {}
-
 
   try {
 
@@ -881,8 +963,8 @@ function startRaidOmen(
   } catch (_) {
 
     return;
-  }
 
+  }
 
   try {
 
@@ -893,27 +975,18 @@ function startRaidOmen(
 
   } catch (_) {}
 
+  if (!village.raidAnnounced) {
 
-  try {
+    village.raidAnnounced =
+      true;
 
-    player.sendMessage(
-      "§4§lVISA EXPIRED!"
-    );
+    saveVillages();
 
-    player.sendMessage(
-      "§4§lRUN! §cVILLAGE POLICE are coming!"
-    );
-
-    player.playSound(
-      "note.bass"
-    );
-
-  } catch (_) {}
-
+    announceExpiredVisa();
+  }
 
   const villageId =
     village.id;
-
 
   system.runTimeout(
     () => {
@@ -923,15 +996,12 @@ function startRaidOmen(
           villageId
         );
 
-
       if (!savedVillage) {
         return;
       }
 
-
       let raidOmen =
         false;
-
 
       try {
 
@@ -941,7 +1011,6 @@ function startRaidOmen(
           );
 
       } catch (_) {}
-
 
       if (!raidOmen) {
 
@@ -953,17 +1022,13 @@ function startRaidOmen(
 
         } catch (_) {}
 
-
         return;
       }
-
 
       savedVillage.raidStarted =
         true;
 
-
       saveVillages();
-
 
       system.runTimeout(
         () => {
@@ -973,11 +1038,9 @@ function startRaidOmen(
               savedVillage
             );
 
-
           if (!target) {
             return;
           }
-
 
           reinforceVillage(
             savedVillage,
@@ -993,7 +1056,6 @@ function startRaidOmen(
   );
 }
 
-
 function handleVillageEntry(
   player,
   village
@@ -1005,7 +1067,6 @@ function handleVillageEntry(
     return;
   }
 
-
   if (
     !village.raidStarted
   ) {
@@ -1015,10 +1076,8 @@ function handleVillageEntry(
       village
     );
 
-
     return;
   }
-
 
   if (
     hasRaidOmen(
@@ -1028,13 +1087,11 @@ function handleVillageEntry(
     return;
   }
 
-
   reinforceVillage(
     village,
     player
   );
 }
-
 
 function findPlayerInsideVillage(
   village
@@ -1045,7 +1102,6 @@ function findPlayerInsideVillage(
 
   let closest =
     Infinity;
-
 
   for (
     const player of
@@ -1061,13 +1117,11 @@ function findPlayerInsideVillage(
       continue;
     }
 
-
     const distance =
       distanceSquared(
         player.location,
         village
       );
-
 
     if (
       distance < closest
@@ -1081,10 +1135,8 @@ function findPlayerInsideVillage(
     }
   }
 
-
   return result;
 }
-
 
 function updateKnownVillageEntries() {
 
@@ -1105,7 +1157,6 @@ function updateKnownVillageEntries() {
       continue;
     }
 
-
     const village =
       findKnownVillageNear(
         player.dimension.id,
@@ -1113,12 +1164,10 @@ function updateKnownVillageEntries() {
         VILLAGE_ENTER_RADIUS
       );
 
-
     const previousVillage =
       playerVillageState.get(
         player.id
       );
-
 
     if (!village) {
 
@@ -1132,10 +1181,8 @@ function updateKnownVillageEntries() {
         );
       }
 
-
       continue;
     }
-
 
     if (
       previousVillage ===
@@ -1144,20 +1191,12 @@ function updateKnownVillageEntries() {
       continue;
     }
 
-
-    playerVillageState.set(
-      player.id,
-      village.id
-    );
-
-
-    handleVillageEntry(
+    enterKnownVillage(
       player,
       village
     );
   }
 }
-
 
 function scanForNewVillages() {
 
@@ -1173,7 +1212,6 @@ function scanForNewVillages() {
       continue;
     }
 
-
     const knownVillage =
       findKnownVillageNear(
         player.dimension.id,
@@ -1181,11 +1219,9 @@ function scanForNewVillages() {
         VILLAGE_ENTER_RADIUS
       );
 
-
     if (knownVillage) {
       continue;
     }
-
 
     if (
       !shouldScanPlayer(
@@ -1195,7 +1231,6 @@ function scanForNewVillages() {
       continue;
     }
 
-
     const villagers =
       getNearbyVillagers(
         player.dimension,
@@ -1203,24 +1238,20 @@ function scanForNewVillages() {
         VILLAGER_SCAN_RADIUS
       );
 
-
     if (
       villagers.length < 2
     ) {
       continue;
     }
 
-
     const center =
       getVillagerCenter(
         villagers
       );
 
-
     if (!center) {
       continue;
     }
-
 
     registerVillage(
       player,
@@ -1229,7 +1260,6 @@ function scanForNewVillages() {
   }
 }
 
-
 function updateVillageTimers() {
 
   const playedTicks =
@@ -1237,7 +1267,6 @@ function updateVillageTimers() {
 
   let changed =
     false;
-
 
   for (
     const village of
@@ -1250,7 +1279,6 @@ function updateVillageTimers() {
       continue;
     }
 
-
     if (
       playedTicks -
       village.discoveredAt <
@@ -1259,19 +1287,24 @@ function updateVillageTimers() {
       continue;
     }
 
-
     village.cursed =
       true;
 
     changed =
       true;
 
+    if (!village.raidAnnounced) {
+
+      village.raidAnnounced =
+        true;
+
+      announceExpiredVisa();
+    }
 
     const player =
       findPlayerInsideVillage(
         village
       );
-
 
     if (player) {
 
@@ -1282,13 +1315,11 @@ function updateVillageTimers() {
     }
   }
 
-
   if (changed) {
 
     saveVillages();
   }
 }
-
 
 function cleanupRaidOmenPlayers() {
 
@@ -1300,7 +1331,6 @@ function cleanupRaidOmenPlayers() {
     let ours =
       false;
 
-
     try {
 
       ours =
@@ -1310,11 +1340,9 @@ function cleanupRaidOmenPlayers() {
 
     } catch (_) {}
 
-
     if (!ours) {
       continue;
     }
-
 
     if (
       hasRaidOmen(
@@ -1323,7 +1351,6 @@ function cleanupRaidOmenPlayers() {
     ) {
       continue;
     }
-
 
     try {
 
@@ -1335,7 +1362,6 @@ function cleanupRaidOmenPlayers() {
     } catch (_) {}
   }
 }
-
 
 export function registerVillageCurse() {
 
@@ -1350,17 +1376,14 @@ export function registerVillageCurse() {
         return;
       }
 
-
       if (
         !event.isFirstEvent
       ) {
         return;
       }
 
-
       const player =
         event.player;
-
 
       if (
         player.dimension.id !==
@@ -1369,14 +1392,12 @@ export function registerVillageCurse() {
         return;
       }
 
-
       if (
         event.block.typeId !==
         "minecraft:bell"
       ) {
         return;
       }
-
 
       const existing =
         findKnownVillageNear(
@@ -1385,24 +1406,15 @@ export function registerVillageCurse() {
           VILLAGE_MERGE_RADIUS
         );
 
-
       if (existing) {
 
-        playerVillageState.set(
-          player.id,
-          existing.id
-        );
-
-
-        handleVillageEntry(
+        enterKnownVillage(
           player,
           existing
         );
 
-
         return;
       }
-
 
       const villagers =
         getNearbyVillagers(
@@ -1411,13 +1423,11 @@ export function registerVillageCurse() {
           BELL_VILLAGER_RADIUS
         );
 
-
       if (
         villagers.length < 1
       ) {
         return;
       }
-
 
       registerVillage(
         player,
@@ -1426,7 +1436,6 @@ export function registerVillageCurse() {
 
     });
 
-
   world.beforeEvents
     .itemUse
     .subscribe(event => {
@@ -1434,28 +1443,24 @@ export function registerVillageCurse() {
       if (
         !event.itemStack ||
         event.itemStack.typeId !==
-        "minecraft:milk_bucket"
+          "minecraft:milk_bucket"
       ) {
         return;
       }
-
 
       const player =
         event.source;
 
-
       if (
         !player ||
         player.typeId !==
-        "minecraft:player"
+          "minecraft:player"
       ) {
         return;
       }
 
-
       let ourOmen =
         false;
-
 
       try {
 
@@ -1466,11 +1471,9 @@ export function registerVillageCurse() {
 
       } catch (_) {}
 
-
       if (!ourOmen) {
         return;
       }
-
 
       if (
         !hasRaidOmen(
@@ -1480,10 +1483,8 @@ export function registerVillageCurse() {
         return;
       }
 
-
       event.cancel =
         true;
-
 
       system.run(
         () => {
@@ -1501,20 +1502,16 @@ export function registerVillageCurse() {
 
     });
 
-
   system.run(
     () => {
 
       villages =
         loadVillages();
 
-
       saveVillages();
-
 
       initialized =
         true;
-
 
       system.runInterval(
         () => {
@@ -1525,7 +1522,6 @@ export function registerVillageCurse() {
           ) {
             return;
           }
-
 
           updateKnownVillageEntries();
 
@@ -1533,7 +1529,6 @@ export function registerVillageCurse() {
         20
       );
 
-
       system.runInterval(
         () => {
 
@@ -1543,7 +1538,6 @@ export function registerVillageCurse() {
           ) {
             return;
           }
-
 
           scanForNewVillages();
 
@@ -1551,7 +1545,6 @@ export function registerVillageCurse() {
         SCAN_INTERVAL
       );
 
-
       system.runInterval(
         () => {
 
@@ -1562,13 +1555,11 @@ export function registerVillageCurse() {
             return;
           }
 
-
           updateVillageTimers();
 
         },
         20
       );
-
 
       system.runInterval(
         () => {
