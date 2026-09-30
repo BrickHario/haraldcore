@@ -1,35 +1,8 @@
+
 import {
   world,
   system,
 } from "@minecraft/server";
-
-
-/*
- * =========================================================
- * HARALDCORE NIGHT SCARES
- * =========================================================
- *
- * Es werden KEINE Mobs gespawnt.
- * Das Pack spielt nur Fake-Mobgeräusche
- * rund um die Spieler ab.
- *
- * OVERWORLD:
- * Nur nachts.
- *
- * NETHER / END / ANDERE DIMENSIONEN:
- * Immer aktiv.
- *
- * Eskalation:
- *
- * Day 1 -> komplett ruhig
- * Day 2 -> selten normale Mobs
- * Day 3 -> regelmäßiger
- * Day 4 -> erste komische Sounds
- * Day 5 -> Horror beginnt
- * Day 6 -> häufig
- * Day 7 -> sehr häufig
- * Day 8 -> komplette Paranoia
- */
 
 const TIMER_KEY =
   "haraldcore:playedTicks";
@@ -40,10 +13,17 @@ const WON_KEY =
 const FAILED_KEY =
   "haraldcore:burnStarted";
 
+const VILLAGES_KEY =
+  "haraldcore:villages";
 
 const TICKS_PER_DAY =
   24000;
 
+const VILLAGE_RADIUS =
+  60;
+
+const VILLAGE_VERTICAL_RADIUS =
+  32;
 
 const DEBUG =
   false;
@@ -51,7 +31,7 @@ const DEBUG =
 const playerTimers =
   new Map();
 
-const SOUNDS_BY_DAY = {
+const OVERWORLD_SOUNDS = {
 
   1: [],
 
@@ -69,7 +49,6 @@ const SOUNDS_BY_DAY = {
   3: [
     "mob.zombie.say",
     "mob.zombie.step",
-    "mob.zombie.wood",
 
     "mob.skeleton.say",
     "mob.skeleton.step",
@@ -78,8 +57,205 @@ const SOUNDS_BY_DAY = {
     "mob.spider.step",
 
     "mob.creeper.say",
-    "mob.drowned.say",
     "mob.witch.ambient",
+  ],
+
+  4: [
+    "mob.zombie.say",
+    "mob.zombie.step",
+
+    "mob.skeleton.say",
+    "mob.skeleton.step",
+
+    "mob.spider.say",
+    "mob.spider.step",
+
+    "mob.creeper.say",
+    "mob.witch.ambient",
+
+    "mob.phantom.idle",
+  ],
+
+  5: [
+    "mob.zombie.say",
+    "mob.zombie.step",
+
+    "mob.skeleton.say",
+    "mob.skeleton.step",
+
+    "mob.spider.say",
+    "mob.spider.step",
+
+    "mob.creeper.say",
+    "mob.witch.ambient",
+
+    "mob.phantom.idle",
+  ],
+
+  6: [
+    "mob.zombie.say",
+    "mob.zombie.step",
+
+    "mob.skeleton.say",
+    "mob.skeleton.step",
+
+    "mob.spider.say",
+    "mob.spider.step",
+
+    "mob.creeper.say",
+    "mob.witch.ambient",
+
+    "mob.phantom.idle",
+    "mob.phantom.swoop",
+  ],
+
+  7: [
+    "mob.zombie.say",
+    "mob.zombie.step",
+
+    "mob.skeleton.say",
+    "mob.skeleton.step",
+
+    "mob.spider.say",
+    "mob.spider.step",
+
+    "mob.creeper.say",
+    "mob.witch.ambient",
+
+    "mob.phantom.idle",
+    "mob.phantom.swoop",
+  ],
+
+  8: [
+    "mob.zombie.say",
+    "mob.zombie.step",
+
+    "mob.skeleton.say",
+    "mob.skeleton.step",
+
+    "mob.spider.say",
+    "mob.spider.step",
+
+    "mob.creeper.say",
+    "mob.witch.ambient",
+
+    "mob.phantom.idle",
+    "mob.phantom.swoop",
+  ],
+};
+
+const NETHER_SOUNDS = {
+
+  1: [],
+
+  2: [
+    "mob.ghast.moan",
+  ],
+
+  3: [
+    "mob.ghast.moan",
+    "mob.ghast.scream",
+  ],
+
+  4: [
+    "mob.ghast.moan",
+    "mob.ghast.scream",
+    "mob.ghast.charge",
+  ],
+
+  5: [
+    "mob.ghast.moan",
+    "mob.ghast.scream",
+    "mob.ghast.charge",
+
+    "mob.wither.ambient",
+  ],
+
+  6: [
+    "mob.ghast.moan",
+    "mob.ghast.scream",
+    "mob.ghast.charge",
+
+    "mob.wither.ambient",
+    "mob.wither.shoot",
+  ],
+
+  7: [
+    "mob.ghast.moan",
+    "mob.ghast.scream",
+    "mob.ghast.charge",
+
+    "mob.wither.ambient",
+    "mob.wither.shoot",
+  ],
+
+  8: [
+    "mob.ghast.moan",
+    "mob.ghast.scream",
+    "mob.ghast.charge",
+
+    "mob.wither.ambient",
+    "mob.wither.shoot",
+    "mob.wither.spawn",
+  ],
+};
+
+const END_SOUNDS = {
+
+  1: [],
+
+  2: [
+    "mob.endermen.idle",
+  ],
+
+  3: [
+    "mob.endermen.idle",
+    "mob.endermen.stare",
+  ],
+
+  4: [
+    "mob.endermen.idle",
+    "mob.endermen.stare",
+  ],
+
+  5: [
+    "mob.endermen.idle",
+    "mob.endermen.stare",
+    "mob.endermen.scream",
+  ],
+
+  6: [
+    "mob.endermen.idle",
+    "mob.endermen.stare",
+    "mob.endermen.scream",
+  ],
+
+  7: [
+    "mob.endermen.idle",
+    "mob.endermen.stare",
+    "mob.endermen.scream",
+  ],
+
+  8: [
+    "mob.endermen.idle",
+    "mob.endermen.stare",
+    "mob.endermen.scream",
+  ],
+};
+
+const VILLAGE_SOUNDS = {
+
+  1: [],
+
+  2: [
+    "mob.zombie.say",
+    "mob.zombie.step",
+  ],
+
+  3: [
+    "mob.zombie.say",
+    "mob.zombie.step",
+    "mob.zombie.wood",
   ],
 
   4: [
@@ -87,19 +263,6 @@ const SOUNDS_BY_DAY = {
     "mob.zombie.step",
     "mob.zombie.wood",
     "mob.zombie.woodbreak",
-
-    "mob.skeleton.say",
-    "mob.skeleton.step",
-
-    "mob.spider.say",
-    "mob.spider.step",
-
-    "mob.creeper.say",
-    "mob.drowned.say",
-    "mob.witch.ambient",
-
-    "mob.endermen.idle",
-    "mob.phantom.idle",
   ],
 
   5: [
@@ -107,126 +270,35 @@ const SOUNDS_BY_DAY = {
     "mob.zombie.wood",
     "mob.zombie.woodbreak",
 
-    "mob.skeleton.say",
-    "mob.skeleton.step",
-
-    "mob.spider.say",
-    "mob.spider.step",
-
-    "mob.creeper.say",
-    "mob.drowned.say",
     "mob.witch.ambient",
-
-    "mob.endermen.idle",
-    "mob.endermen.stare",
-
-    "mob.phantom.idle",
-
-    "mob.ghast.moan",
-
-    "mob.warden.heartbeat",
   ],
 
   6: [
     "mob.zombie.say",
     "mob.zombie.wood",
     "mob.zombie.woodbreak",
+    "mob.zombie.woodbreak",
 
-    "mob.skeleton.say",
-    "mob.skeleton.step",
-
-    "mob.spider.say",
-
-    "mob.creeper.say",
     "mob.witch.ambient",
-
-    "mob.endermen.idle",
-    "mob.endermen.stare",
-    "mob.endermen.scream",
-
-    "mob.ghast.moan",
-    "mob.ghast.scream",
-
-    "mob.phantom.idle",
-    "mob.phantom.swoop",
-
-    "mob.wither.ambient",
-
-    "mob.warden.heartbeat",
-    "mob.warden.listening",
   ],
 
   7: [
     "mob.zombie.say",
     "mob.zombie.wood",
     "mob.zombie.woodbreak",
+    "mob.zombie.woodbreak",
 
-    "mob.skeleton.say",
-    "mob.skeleton.step",
-
-    "mob.spider.say",
-
-    "mob.creeper.say",
     "mob.witch.ambient",
-
-    "mob.endermen.stare",
-    "mob.endermen.scream",
-
-    "mob.ghast.moan",
-    "mob.ghast.scream",
-    "mob.ghast.charge",
-
-    "mob.phantom.idle",
-    "mob.phantom.swoop",
-
-    "mob.wither.ambient",
-    "mob.wither.shoot",
-
-    "mob.warden.heartbeat",
-    "mob.warden.listening",
-    "mob.warden.listening_angry",
-    "mob.warden.nearby_close",
-    "mob.warden.nearby_closer",
   ],
 
   8: [
     "mob.zombie.say",
-    "mob.zombie.step",
     "mob.zombie.wood",
     "mob.zombie.woodbreak",
+    "mob.zombie.woodbreak",
+    "mob.zombie.woodbreak",
 
-    "mob.skeleton.say",
-    "mob.skeleton.step",
-
-    "mob.spider.say",
-    "mob.spider.step",
-
-    "mob.creeper.say",
-    "mob.drowned.say",
     "mob.witch.ambient",
-
-    "mob.endermen.idle",
-    "mob.endermen.stare",
-    "mob.endermen.scream",
-
-    "mob.ghast.moan",
-    "mob.ghast.scream",
-    "mob.ghast.charge",
-
-    "mob.phantom.idle",
-    "mob.phantom.swoop",
-
-    "mob.wither.ambient",
-    "mob.wither.shoot",
-    "mob.wither.spawn",
-
-    "mob.warden.heartbeat",
-    "mob.warden.listening",
-    "mob.warden.listening_angry",
-    "mob.warden.nearby_close",
-    "mob.warden.nearby_closer",
-    "mob.warden.nearby_closest",
-    "mob.warden.roar",
   ],
 };
 
@@ -239,7 +311,6 @@ function randomInt(min, max) {
     ) + min
   );
 }
-
 
 function randomFrom(array) {
 
@@ -258,19 +329,16 @@ function getChallengeDay() {
       TIMER_KEY
     );
 
-
   const ticks =
     typeof value === "number"
       ? value
       : 0;
-
 
   const day =
     Math.floor(
       ticks /
       TICKS_PER_DAY
     ) + 1;
-
 
   return Math.min(
     Math.max(
@@ -285,7 +353,6 @@ function isNight() {
 
   const time =
     world.getTimeOfDay();
-
 
   return (
     time >= 13000 &&
@@ -313,17 +380,144 @@ function challengeIsActive() {
       WON_KEY
     ) === true;
 
-
   const failed =
     world.getDynamicProperty(
       FAILED_KEY
     ) === true;
 
-
   return (
     !won &&
     !failed
   );
+}
+
+function playerIsInVillage(player) {
+
+  if (
+    player.dimension.id !==
+    "minecraft:overworld"
+  ) {
+    return false;
+  }
+
+  const saved =
+    world.getDynamicProperty(
+      VILLAGES_KEY
+    );
+
+  if (
+    typeof saved !== "string" ||
+    !saved
+  ) {
+    return false;
+  }
+
+  try {
+
+    const villages =
+      JSON.parse(
+        saved
+      );
+
+    if (
+      !Array.isArray(
+        villages
+      )
+    ) {
+      return false;
+    }
+
+    for (
+      const village of villages
+    ) {
+
+      if (
+        village.dimension !==
+        player.dimension.id
+      ) {
+        continue;
+      }
+
+      const dx =
+        player.location.x -
+        village.x;
+
+      const dz =
+        player.location.z -
+        village.z;
+
+      const dy =
+        Math.abs(
+          player.location.y -
+          village.y
+        );
+
+      if (
+        dx * dx +
+        dz * dz <=
+        VILLAGE_RADIUS *
+        VILLAGE_RADIUS &&
+        dy <=
+        VILLAGE_VERTICAL_RADIUS
+      ) {
+
+        return true;
+      }
+    }
+
+  } catch (_) {}
+
+  return false;
+}
+
+function getSoundsForPlayer(
+  player,
+  day
+) {
+
+  const dimension =
+    player.dimension.id;
+
+  if (
+    dimension ===
+    "minecraft:overworld"
+  ) {
+
+    const sounds = [
+      ...OVERWORLD_SOUNDS[day]
+    ];
+
+    if (
+      playerIsInVillage(
+        player
+      )
+    ) {
+
+      sounds.push(
+        ...VILLAGE_SOUNDS[day]
+      );
+    }
+
+    return sounds;
+  }
+
+  if (
+    dimension ===
+    "minecraft:nether"
+  ) {
+
+    return NETHER_SOUNDS[day];
+  }
+
+  if (
+    dimension ===
+    "minecraft:the_end"
+  ) {
+
+    return END_SOUNDS[day];
+  }
+
+  return [];
 }
 
 function getNextDelay(day) {
@@ -335,99 +529,49 @@ function getNextDelay(day) {
 
     case 2:
       return randomInt(
-        35,
-        60
+        170,
+        230
       );
 
     case 3:
       return randomInt(
-        20,
-        35
+        145,
+        195
       );
 
     case 4:
       return randomInt(
-        12,
-        22
+        120,
+        160
       );
 
     case 5:
       return randomInt(
-        8,
-        14
+        95,
+        125
       );
 
     case 6:
       return randomInt(
-        5,
-        9
+        70,
+        90
       );
 
     case 7:
       return randomInt(
-        3,
-        6
+        43,
+        57
       );
 
     case 8:
       return randomInt(
-        1,
-        3
+        17,
+        23
       );
 
     default:
-      return 30;
+      return 200;
   }
-}
-
-function getBurstCount(day) {
-
-  if (
-    day <= 4
-  ) {
-
-    return 1;
-  }
-
-
-  if (
-    day === 5
-  ) {
-
-    return (
-      Math.random() < 0.25
-        ? 2
-        : 1
-    );
-  }
-
-
-  if (
-    day === 6
-  ) {
-
-    return randomInt(
-      1,
-      2
-    );
-  }
-
-
-  if (
-    day === 7
-  ) {
-
-    return randomInt(
-      1,
-      3
-    );
-  }
-
-
-  return randomInt(
-    2,
-    4
-  );
 }
 
 function getSoundDistance(day) {
@@ -442,7 +586,6 @@ function getSoundDistance(day) {
     );
   }
 
-
   if (
     day <= 6
   ) {
@@ -452,7 +595,6 @@ function getSoundDistance(day) {
       8
     );
   }
-
 
   return randomInt(
     2,
@@ -466,10 +608,10 @@ function playScarySound(
 ) {
 
   const sounds =
-    SOUNDS_BY_DAY[
+    getSoundsForPlayer(
+      player,
       day
-    ];
-
+    );
 
   if (
     !sounds ||
@@ -479,24 +621,20 @@ function playScarySound(
     return;
   }
 
-
   const sound =
     randomFrom(
       sounds
     );
-
 
   const angle =
     Math.random() *
     Math.PI *
     2;
 
-
   const distance =
     getSoundDistance(
       day
     );
-
 
   const location = {
 
@@ -522,12 +660,10 @@ function playScarySound(
       distance,
   };
 
-
   let pitch =
     0.90 +
     Math.random() *
     0.20;
-
 
   if (
     day >= 6
@@ -539,10 +675,8 @@ function playScarySound(
       0.35;
   }
 
-
   let volume =
     1.0;
-
 
   if (
     day >= 6
@@ -552,7 +686,6 @@ function playScarySound(
       1.15;
   }
 
-
   if (
     day === 8
   ) {
@@ -560,7 +693,6 @@ function playScarySound(
     volume =
       1.3;
   }
-
 
   try {
 
@@ -572,7 +704,6 @@ function playScarySound(
         pitch,
       }
     );
-
 
     if (DEBUG) {
 
@@ -589,6 +720,31 @@ function playScarySound(
   }
 }
 
+function getBurstCount(day) {
+
+  if (day <= 5) {
+    return 1;
+  }
+
+  if (day === 6) {
+    return Math.random() < 0.20
+      ? 2
+      : 1;
+  }
+
+  if (day === 7) {
+    return Math.random() < 0.35
+      ? 2
+      : 1;
+  }
+
+  if (day === 8) {
+    return randomInt(1, 2);
+  }
+
+  return 1;
+}
+
 function playScareEvent(
   player,
   day
@@ -598,7 +754,6 @@ function playScareEvent(
     getBurstCount(
       day
     );
-
 
   for (
     let i = 0;
@@ -614,7 +769,6 @@ function playScareEvent(
             35
           );
 
-
     system.runTimeout(
       () => {
 
@@ -624,7 +778,6 @@ function playScareEvent(
 
           return;
         }
-
 
         if (
           !challengeIsActive()
@@ -642,10 +795,9 @@ function playScareEvent(
           return;
         }
 
-
         playScarySound(
           player,
-          day
+          getChallengeDay()
         );
 
       },
@@ -668,7 +820,6 @@ export function registerNightScares() {
 
         return;
       }
-
 
       const day =
         getChallengeDay();
@@ -700,7 +851,6 @@ export function registerNightScares() {
           continue;
         }
 
-
         let state =
           playerTimers.get(
             player.id
@@ -721,12 +871,10 @@ export function registerNightScares() {
               ),
           };
 
-
           playerTimers.set(
             player.id,
             state
           );
-
 
           continue;
         }
@@ -739,22 +887,18 @@ export function registerNightScares() {
           state.dimension =
             player.dimension.id;
 
-
           state.day =
             day;
-
 
           state.secondsLeft =
             getNextDelay(
               day
             );
 
-
           playerTimers.set(
             player.id,
             state
           );
-
 
           continue;
         }
@@ -766,25 +910,20 @@ export function registerNightScares() {
           state.day =
             day;
 
-
           state.secondsLeft =
             getNextDelay(
               day
             );
-
 
           playerTimers.set(
             player.id,
             state
           );
 
-
           continue;
         }
 
-
         state.secondsLeft--;
-
 
         if (
           state.secondsLeft > 0
@@ -794,7 +933,6 @@ export function registerNightScares() {
             player.id,
             state
           );
-
 
           continue;
         }
@@ -808,7 +946,6 @@ export function registerNightScares() {
           getNextDelay(
             day
           );
-
 
         playerTimers.set(
           player.id,
