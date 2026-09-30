@@ -3,18 +3,18 @@ import { world, system } from "@minecraft/server";
 export function registerGetBoat() {
   const TASK_BOAT = "Craft a boat";
 
-const BOAT_TYPES = [
-  "minecraft:oak_boat",
-  "minecraft:spruce_boat",
-  "minecraft:birch_boat",
-  "minecraft:jungle_boat",
-  "minecraft:acacia_boat",
-  "minecraft:dark_oak_boat",
-  "minecraft:mangrove_boat",
-  "minecraft:cherry_boat",
-  "minecraft:pale_oak_boat",
-  "minecraft:bamboo_raft",
-];
+  const BOAT_TYPES = [
+    "minecraft:oak_boat",
+    "minecraft:spruce_boat",
+    "minecraft:birch_boat",
+    "minecraft:jungle_boat",
+    "minecraft:acacia_boat",
+    "minecraft:dark_oak_boat",
+    "minecraft:mangrove_boat",
+    "minecraft:cherry_boat",
+    "minecraft:pale_oak_boat",
+    "minecraft:bamboo_raft",
+  ];
 
   let completionQueued = false;
 
@@ -62,8 +62,11 @@ const BOAT_TYPES = [
         dim.runCommand(`scoreboard players reset "${TASK_BOAT}" todo`);
         dim.runCommand(`scoreboard players set "§a✔ ${TASK_BOAT}" todo 0`);
 
-        player.sendMessage(`§aTask done: ${TASK_BOAT}!`);
-        player.playSound("random.orb");
+        world.sendMessage(`§aTask done: ${TASK_BOAT}!`);
+
+        for (const onlinePlayer of world.getPlayers()) {
+          onlinePlayer.playSound("random.orb");
+        }
 
         completionQueued = false;
       });

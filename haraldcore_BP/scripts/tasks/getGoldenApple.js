@@ -44,8 +44,11 @@ export function registerHeal() {
       dim.runCommand(`scoreboard players reset "${TASK_HEAL}" todo`);
       dim.runCommand(`scoreboard players set "§a✔ ${TASK_HEAL}" todo 0`);
 
-      player.sendMessage(`§aTask done: ${TASK_HEAL}! Maybe it can heal you?`);
-      player.playSound("random.orb");
+      world.sendMessage(`§aTask done: ${TASK_HEAL}! Maybe it can heal you?`);
+
+      for (const onlinePlayer of world.getPlayers()) {
+        onlinePlayer.playSound("random.orb");
+      }
 
       completionQueued = false;
     });

@@ -50,8 +50,11 @@ export function registerGetIronBars() {
         dim.runCommand(`scoreboard players reset "${TASK_IRON_BARS}" todo`);
         dim.runCommand(`scoreboard players set "§a✔ ${TASK_IRON_BARS}" todo 0`);
 
-        player.sendMessage(`§aTask done: ${TASK_IRON_BARS}!`);
-        player.playSound("random.orb");
+        world.sendMessage(`§aTask done: ${TASK_IRON_BARS}!`);
+
+        for (const onlinePlayer of world.getPlayers()) {
+          onlinePlayer.playSound("random.orb");
+        }
 
         completionQueued = false;
       });

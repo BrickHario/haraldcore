@@ -36,8 +36,11 @@ export function registerGoNether() {
         dim.runCommand(`scoreboard players reset "${TASK_NETHER}" todo`);
         dim.runCommand(`scoreboard players set "§a✔ ${TASK_NETHER}" todo 0`);
 
-        player.sendMessage(`§aTask done: ${TASK_NETHER}! Looks scary..`);
-        player.playSound("random.orb");
+        world.sendMessage(`§aTask done: ${TASK_NETHER}! Looks scary..`);
+
+        for (const onlinePlayer of world.getPlayers()) {
+          onlinePlayer.playSound("random.orb");
+        }
 
         completionQueued = false;
       });

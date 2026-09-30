@@ -17,97 +17,46 @@ export function registerKillZombie() {
   let completionQueued = false;
 
   function taskAlreadyDone() {
-    const todo =
-      world.scoreboard.getObjective(
-        "todo"
-      );
-
+    const todo = world.scoreboard.getObjective("todo");
     if (!todo) return false;
 
     try {
-      return todo.hasParticipant(
-        `§a✔ ${TASK_ZOMBIE}`
-      );
+      return todo.hasParticipant(`§a✔ ${TASK_ZOMBIE}`);
     } catch (_) {
       return false;
     }
   }
 
-  world.afterEvents.entityDie.subscribe(
-    event => {
+  world.afterEvents.entityDie.subscribe(event => {
+    const deadType = event.deadEntity?.typeId;
+    if (!deadType || !ZOMBIE_TYPES.includes(deadType)) return;
 
-      const deadType =
-        event.deadEntity?.typeId;
+    const killer = event.damageSource?.damagingEntity;
+    if (!killer || killer.typeId !== "minecraft:player") return;
 
-      if (
-        !deadType ||
-        !ZOMBIE_TYPES.includes(
-          deadType
-        )
-      ) {
-        return;
-      }
+    if (!world.scoreboard.getObjective("todo")) return;
+    if (taskAlreadyDone() || completionQueued) return;
 
-      const killer =
-        event.damageSource?.damagingEntity;
+    completionQueued = true;
 
-      if (
-        !killer ||
-        killer.typeId !==
-          "minecraft:player"
-      ) {
-        return;
-      }
+    system.run(() => {
+      const dim = world.getDimension("overworld");
 
-      if (
-        !world.scoreboard.getObjective(
-          "todo"
-        )
-      ) {
-        return;
-      }
-
-      if (
-        taskAlreadyDone() ||
-        completionQueued
-      ) {
-        return;
-      }
-
-      completionQueued = true;
-
-      system.run(() => {
-
-        const dim =
-          world.getDimension(
-            "overworld"
-          );
-
-        if (
-          taskAlreadyDone()
-        ) {
-          completionQueued = false;
-          return;
-        }
-
-        dim.runCommand(
-          `scoreboard players reset "${TASK_ZOMBIE}" todo`
-        );
-
-        dim.runCommand(
-          `scoreboard players set "§a✔ ${TASK_ZOMBIE}" todo 0`
-        );
-
-        killer.sendMessage(
-          `§aTask done: ${TASK_ZOMBIE}! Zombie VS Plants?`
-        );
-
-        killer.playSound(
-          "random.orb"
-        );
-
+      if (taskAlreadyDone()) {
         completionQueued = false;
-      });
-    }
-  );
+        return;
+      }
+
+      dim.runCommand(`scoreboard players reset "${TASK_ZOMBIE}" todo`);
+      dim.runCommand(`scoreboard players set "§a✔ ${TASK_ZOMBIE}" todo 0`);
+
+      world.sendMessage(`§aTask done: ${TASK_ZOMBIE}! Zombie VS Plants?`);
+
+      for (const onlinePlayer of world.getPlayers()) {
+        onlinePlayer.playSound("random.orb");
+      }
+
+      completionQueued = false;
+    });
+  });
 }

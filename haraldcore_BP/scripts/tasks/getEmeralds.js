@@ -50,8 +50,11 @@ export function registerGetEmeralds() {
         dim.runCommand(`scoreboard players reset "${TASK_EMERALDS}" todo`);
         dim.runCommand(`scoreboard players set "§a✔ ${TASK_EMERALDS}" todo 0`);
 
-        player.sendMessage(`§aTask done: ${TASK_EMERALDS}! Rich millionaire!`);
-        player.playSound("random.orb");
+        world.sendMessage(`§aTask done: ${TASK_EMERALDS}! Rich millionaire!`);
+
+        for (const onlinePlayer of world.getPlayers()) {
+          onlinePlayer.playSound("random.orb");
+        }
 
         completionQueued = false;
       });

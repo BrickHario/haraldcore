@@ -44,8 +44,11 @@ export function registerKillCow() {
       dim.runCommand(`scoreboard players reset "${TASK_COW}" todo`);
       dim.runCommand(`scoreboard players set "§a✔ ${TASK_COW}" todo 0`);
 
-      killer.sendMessage(`§aTask done: ${TASK_COW}! Who needs milk?`);
-      killer.playSound("random.orb");
+      world.sendMessage(`§aTask done: ${TASK_COW}! Who needs milk?`);
+
+      for (const onlinePlayer of world.getPlayers()) {
+        onlinePlayer.playSound("random.orb");
+      }
 
       completionQueued = false;
     });
