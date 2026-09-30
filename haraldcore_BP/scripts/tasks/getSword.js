@@ -58,8 +58,10 @@ export function registerGetSword() {
         dim.runCommand(`scoreboard players reset "${TASK_SWORD}" todo`);
         dim.runCommand(`scoreboard players set "§a✔ ${TASK_SWORD}" todo 0`);
 
-        world.sendMessage(`§aTask done: ${TASK_SWORD}! Kill them all!`);
+        const personalTasks = player.getDynamicProperty("haraldcore:personalTasks") ?? 0;
+        player.setDynamicProperty("haraldcore:personalTasks", personalTasks + 1);
 
+        world.sendMessage(`§aTask done: ${TASK_SWORD}! Kill them all!`);
         for (const onlinePlayer of world.getPlayers()) {
           onlinePlayer.playSound("random.orb");
         }

@@ -44,8 +44,10 @@ export function registerHeal() {
       dim.runCommand(`scoreboard players reset "${TASK_HEAL}" todo`);
       dim.runCommand(`scoreboard players set "§a✔ ${TASK_HEAL}" todo 0`);
 
-      world.sendMessage(`§aTask done: ${TASK_HEAL}! Maybe it can heal you?`);
+      const personalTasks = player.getDynamicProperty("haraldcore:personalTasks") ?? 0;
+      player.setDynamicProperty("haraldcore:personalTasks", personalTasks + 1);
 
+      world.sendMessage(`§aTask done: ${TASK_HEAL}! Maybe it can heal you?`);
       for (const onlinePlayer of world.getPlayers()) {
         onlinePlayer.playSound("random.orb");
       }

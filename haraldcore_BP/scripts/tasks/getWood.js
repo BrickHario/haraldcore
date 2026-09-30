@@ -1,8 +1,14 @@
-import { world, system } from "@minecraft/server";
+import {
+  world,
+  system
+} from "@minecraft/server";
+
 
 const TASK_WOOD = "Find wood";
 
+
 const WOOD_TYPES = [
+
   "minecraft:oak_log",
   "minecraft:stripped_oak_log",
   "minecraft:oak_planks",
@@ -52,71 +58,133 @@ const WOOD_TYPES = [
   "minecraft:warped_planks",
 ];
 
+
 export function registerFindWood() {
+
   let completionQueued = false;
 
+
   function playerHasWood(player) {
-    const invComp = player.getComponent("minecraft:inventory");
+
+    const invComp =
+      player.getComponent(
+        "minecraft:inventory"
+      );
 
     if (!invComp) {
       return false;
     }
 
-    const inv = invComp.container;
+
+    const inv =
+      invComp.container;
 
     if (!inv) {
       return false;
     }
 
-    for (let i = 0; i < inv.size; i++) {
-      const item = inv.getItem(i);
 
-      if (item && WOOD_TYPES.includes(item.typeId)) {
+    for (
+      let i = 0;
+      i < inv.size;
+      i++
+    ) {
+
+      const item =
+        inv.getItem(i);
+
+      if (
+        item &&
+        WOOD_TYPES.includes(
+          item.typeId
+        )
+      ) {
         return true;
       }
     }
 
+
     return false;
   }
 
+
   function taskAlreadyDone() {
-    const todo = world.scoreboard.getObjective("todo");
+
+    const todo =
+      world.scoreboard.getObjective(
+        "todo"
+      );
 
     if (!todo) {
       return false;
     }
 
+
     try {
-      return todo.hasParticipant(`§a✔ ${TASK_WOOD}`);
+
+      return todo.hasParticipant(
+        `§a✔ ${TASK_WOOD}`
+      );
+
     } catch (_) {
+
       return false;
+
     }
   }
 
+
   system.runInterval(() => {
-    if (!world.scoreboard.getObjective("todo")) {
+
+    if (
+      !world.scoreboard.getObjective(
+        "todo"
+      )
+    ) {
       return;
     }
 
-    if (taskAlreadyDone() || completionQueued) {
+
+    if (
+      taskAlreadyDone() ||
+      completionQueued
+    ) {
       return;
     }
 
-    for (const player of world.getPlayers()) {
-      if (!playerHasWood(player)) {
+
+    for (
+      const player
+      of world.getPlayers()
+    ) {
+
+      if (
+        !playerHasWood(player)
+      ) {
         continue;
       }
 
+
       completionQueued = true;
 
-      system.run(() => {
-        try {
-          const dim = world.getDimension("overworld");
 
-          if (taskAlreadyDone()) {
+      system.run(() => {
+
+        try {
+
+          const dim =
+            world.getDimension(
+              "overworld"
+            );
+
+
+          if (
+            taskAlreadyDone()
+          ) {
             completionQueued = false;
             return;
           }
+
 
           dim.runCommand(
             `scoreboard players reset "${TASK_WOOD}" todo`
@@ -126,25 +194,33 @@ export function registerFindWood() {
             `scoreboard players set "§a✔ ${TASK_WOOD}" todo 0`
           );
 
-          world.sendMessage(
-            `§aTask done: ${TASK_WOOD}! Took a lot for the first step..`
-          );
 
+          const personalTasks = player.getDynamicProperty("haraldcore:personalTasks") ?? 0;
+          player.setDynamicProperty("haraldcore:personalTasks", personalTasks + 1);
+
+
+          world.sendMessage(`§aTask done: ${TASK_WOOD}! Took a lot for the first step..`);
           for (const onlinePlayer of world.getPlayers()) {
             onlinePlayer.playSound("random.orb");
           }
 
+
         } catch (error) {
+
           console.warn(
             `[HaraldCore] Find wood task error: ${error}`
           );
 
         } finally {
+
           completionQueued = false;
+
         }
       });
 
+
       break;
     }
+
   }, 80);
 }

@@ -1,5 +1,10 @@
 import { world, system } from "@minecraft/server";
 
+function getPersonalTaskCount(player) {
+  const tasks = player.getDynamicProperty("haraldcore:personalTasks");
+  return typeof tasks === "number" ? tasks : 0;
+}
+
 export function registerDeath() {
   const TICKS_PER_DAY = 24000;
 
@@ -140,10 +145,11 @@ export function registerDeath() {
   function calculateHaraldScore(
     completedTasks,
     playedDays,
-    heartsLost
+    heartsLost,
+    won = false
   ) {
 
-    if (completedTasks >= 10) {
+    if (won) {
 
       const speedScore =
         Math.max(
@@ -170,9 +176,9 @@ export function registerDeath() {
       return Math.min(
         9999,
         Math.max(
-          7000,
+          0,
           Math.round(
-            7000 +
+            completedTasks * 700 +
             speedScore +
             healthScore
           )
@@ -285,9 +291,10 @@ export function registerDeath() {
 
       const haraldScore =
         calculateHaraldScore(
-          completedTasks,
+          getPersonalTaskCount(winner),
           playedDays,
-          heartsLost
+          heartsLost,
+          true
         );
 
       const formattedScore =
@@ -449,96 +456,97 @@ export function registerDeath() {
     }
   }
 
-world.afterEvents.entityDie.subscribe(event => {
-  const dead = event.deadEntity;
+  world.afterEvents.entityDie.subscribe(event => {
+    const dead = event.deadEntity;
 
-  if (
-    !dead ||
-    dead.typeId !== "minecraft:player"
-  ) {
-    return;
-  }
+    if (
+      !dead ||
+      dead.typeId !== "minecraft:player"
+    ) {
+      return;
+    }
 
-  const playedDays =
-    getPlayedDaysPrecise();
+    const playedDays =
+      getPlayedDaysPrecise();
 
-  const completedTasks =
-    getCompletedTaskCount();
+    const completedTasks =
+      getCompletedTaskCount();
 
-  const heartsLost =
-    getHeartsLost(dead);
+    const heartsLost =
+      getHeartsLost(dead);
 
-  const haraldScore =
-    calculateHaraldScore(
-      completedTasks,
-      playedDays,
-      heartsLost
-    );
-
-  const formattedScore =
-    formatHaraldScore(
-      haraldScore
-    );
-
-  const scoreStars =
-    getScoreStars(
-      haraldScore,
-      completedTasks
-    );
-
-  const scoreText =
-    scoreStars
-      ? `§6§lScore: §e${formattedScore} §r${scoreStars}`
-      : `§6§lScore: §e${formattedScore}`;
-
-  function showDeathStats() {
-    try {
-      dead.runCommand(
-        "title @s times 0 6000 0"
+    const haraldScore =
+      calculateHaraldScore(
+        getPersonalTaskCount(dead),
+        playedDays,
+        heartsLost,
+        allTasksCompleted()
       );
 
-      dead.runCommand(
-        `title @s title §c${playedDays} Days`
+    const formattedScore =
+      formatHaraldScore(
+        haraldScore
       );
 
-      dead.runCommand(
-        `title @s subtitle §e${completedTasks}/10 Tasks §8| §6Score: §e${formattedScore}`
-      );
-    } catch (_) {}
-  }
-
-  showDeathStats();
-
-  system.run(() => {
-    showDeathStats();
-
-    try {
-      dead.sendMessage(
-        `§cYou died! You survived §f${playedDays} §cdays and completed §e${completedTasks}/10 §ctasks.`
+    const scoreStars =
+      getScoreStars(
+        haraldScore,
+        completedTasks
       );
 
-      dead.sendMessage(
-        scoreText
-      );
-    } catch (_) {}
+    const scoreText =
+      scoreStars
+        ? `§6§lScore: §e${formattedScore} §r${scoreStars}`
+        : `§6§lScore: §e${formattedScore}`;
 
-    for (const player of world.getPlayers()) {
-      if (player.id === dead.id) {
-        continue;
-      }
-
+    function showDeathStats() {
       try {
-        player.sendMessage(
-          `§e${dead.name} §cdied after §f${playedDays} §cdays with §e${completedTasks}/10 §ctasks completed!`
+        dead.runCommand(
+          "title @s times 0 6000 0"
         );
 
-        player.sendMessage(
-          scoreText
+        dead.runCommand(
+          `title @s title §c${playedDays} Days`
+        );
+
+        dead.runCommand(
+          `title @s subtitle §e${completedTasks}/10 Tasks §8| §6Score: §e${formattedScore}`
         );
       } catch (_) {}
     }
+
+    showDeathStats();
+
+    system.run(() => {
+      showDeathStats();
+
+      try {
+        dead.sendMessage(
+          `§cYou died! You survived §f${playedDays} §cdays and completed §e${completedTasks}/10 §ctasks.`
+        );
+
+        dead.sendMessage(
+          scoreText
+        );
+      } catch (_) {}
+
+      for (const player of world.getPlayers()) {
+        if (player.id === dead.id) {
+          continue;
+        }
+
+        try {
+          player.sendMessage(
+            `§e${dead.name} §cdied after §f${playedDays} §cdays with §e${completedTasks}/10 §ctasks completed!`
+          );
+
+          player.sendMessage(
+            scoreText
+          );
+        } catch (_) {}
+      }
+    });
   });
-});
 
   system.run(() => {
     const savedTicks =

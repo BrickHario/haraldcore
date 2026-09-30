@@ -10,6 +10,12 @@ import {
 } from "@minecraft/server-ui";
 
 
+function getPersonalTaskCount(player) {
+  const tasks = player.getDynamicProperty("haraldcore:personalTasks");
+  return typeof tasks === "number" ? tasks : 0;
+}
+
+
 const TASKS = [
   "Find wood",
   "Craft a boat",
@@ -230,10 +236,11 @@ function getVillageCount() {
 function calculateHaraldScore(
   completedTasks,
   playedDays,
-  heartsLost
+  heartsLost,
+  won = false
 ) {
 
-  if (completedTasks >= 10) {
+  if (won) {
 
     const speedScore =
       Math.max(
@@ -262,9 +269,9 @@ function calculateHaraldScore(
     return Math.min(
       9999,
       Math.max(
-        7000,
+        0,
         Math.round(
-          7000 +
+          completedTasks * 700 +
           speedScore +
           healthScore
         )
@@ -425,9 +432,10 @@ export async function showHaraldChecklist(
 
       const haraldScore =
         calculateHaraldScore(
-          doneCount,
+          getPersonalTaskCount(player),
           playedDays,
-          heartsLost
+          heartsLost,
+          won
         );
 
 

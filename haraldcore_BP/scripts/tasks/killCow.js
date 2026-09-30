@@ -44,8 +44,10 @@ export function registerKillCow() {
       dim.runCommand(`scoreboard players reset "${TASK_COW}" todo`);
       dim.runCommand(`scoreboard players set "§a✔ ${TASK_COW}" todo 0`);
 
-      world.sendMessage(`§aTask done: ${TASK_COW}! Who needs milk?`);
+      const personalTasks = killer.getDynamicProperty("haraldcore:personalTasks") ?? 0;
+      killer.setDynamicProperty("haraldcore:personalTasks", personalTasks + 1);
 
+      world.sendMessage(`§aTask done: ${TASK_COW}! Who needs milk?`);
       for (const onlinePlayer of world.getPlayers()) {
         onlinePlayer.playSound("random.orb");
       }
