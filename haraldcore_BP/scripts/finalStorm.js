@@ -17,13 +17,16 @@ const BURN_KEY =
 const TICKS_PER_DAY =
   24000;
 
-const RAIN_DAY_START =
+const NIGHT_6_START =
+  TICKS_PER_DAY * 5;
+
+const NIGHT_7_START =
   TICKS_PER_DAY * 6;
 
-const FINAL_DAY_START =
+const NIGHT_8_START =
   TICKS_PER_DAY * 7;
 
-const FINAL_DAY_END =
+const CHALLENGE_END =
   TICKS_PER_DAY * 8;
 
 let weatherState =
@@ -36,97 +39,114 @@ function randomInt(
   min,
   max
 ) {
-
   return (
     Math.floor(
       Math.random() *
       (max - min + 1)
     ) + min
   );
-
 }
 
 function getPlayedTicks() {
-
   const ticks =
     world.getDynamicProperty(
       TIMER_KEY
     );
-
 
   return (
     typeof ticks === "number"
       ? ticks
       : 0
   );
-
 }
 
 function challengeIsActive() {
-
   const won =
     world.getDynamicProperty(
       WON_KEY
     ) === true;
-
 
   const failed =
     world.getDynamicProperty(
       BURN_KEY
     ) === true;
 
-
   return (
     !won &&
     !failed
   );
-
 }
 
-function isRainDay() {
+function isMinecraftNight() {
+  try {
+    const time =
+      world.getTimeOfDay();
 
+    return (
+      time >= 13000 &&
+      time < 23000
+    );
+  } catch (_) {
+    return false;
+  }
+}
+
+function getStormNight() {
   if (
     !challengeIsActive()
   ) {
-    return false;
+    return 0;
   }
 
+  if (
+    !isMinecraftNight()
+  ) {
+    return 0;
+  }
 
   const ticks =
     getPlayedTicks();
 
 
-  return (
-    ticks >= RAIN_DAY_START &&
-    ticks < FINAL_DAY_START
-  );
-
-}
-
-function isFinalDay() {
-
+  /*
+   * Nacht 8
+   */
   if (
-    !challengeIsActive()
+    ticks >= NIGHT_8_START &&
+    ticks < CHALLENGE_END
   ) {
-    return false;
+    return 8;
   }
 
 
-  const ticks =
-    getPlayedTicks();
+  /*
+   * Nacht 7
+   */
+  if (
+    ticks >= NIGHT_7_START &&
+    ticks < NIGHT_8_START
+  ) {
+    return 7;
+  }
 
 
-  return (
-    ticks >= FINAL_DAY_START &&
-    ticks < FINAL_DAY_END
-  );
+  /*
+   * Nacht 6
+   */
+  if (
+    ticks >= NIGHT_6_START &&
+    ticks < NIGHT_7_START
+  ) {
+    return 6;
+  }
 
+
+  return 0;
 }
+
 
 function startRain() {
-
   try {
-
     const overworld =
       world.getDimension(
         "overworld"
@@ -135,71 +155,59 @@ function startRain() {
     overworld.runCommand(
       "weather rain 1200"
     );
-
   } catch (error) {
-
     console.warn(
       `[HaraldCore] Could not start rain: ${error}`
     );
-
   }
-
 }
 
+
 function startThunderstorm() {
-
   try {
-
     const overworld =
       world.getDimension(
         "overworld"
       );
-
 
     overworld.runCommand(
       "weather thunder 1200"
     );
-
   } catch (error) {
-
     console.warn(
-      `[HaraldCore] Could not start final storm: ${error}`
+      `[HaraldCore] Could not start thunderstorm: ${error}`
     );
-
   }
-
 }
 
+
 function clearWeather() {
-
   try {
-
     const overworld =
       world.getDimension(
         "overworld"
       );
 
-
     overworld.runCommand(
       "weather clear 200"
     );
-
   } catch (_) {}
-
 }
 
-function announceRainDay() {
 
+/*
+ * Nacht 6:
+ * Nur Regen.
+ */
+function announceNight6() {
   for (
-    const player
-    of world.getAllPlayers()
+    const player of
+    world.getAllPlayers()
   ) {
-
     try {
-
       player.onScreenDisplay
         .setTitle(
-          "§8§lDAY 7",
+          "§8§lNIGHT 6",
           {
             subtitle:
               "§7THE SKY IS TURNING DARK.",
@@ -208,30 +216,69 @@ function announceRainDay() {
             fadeOutDuration: 20,
           }
         );
-
     } catch (_) {}
-
   }
 
-
   world.sendMessage(
-    "§8§lDAY 7 §r§7The sky is turning dark."
+    "§8§lNIGHT 6 §r§7The sky is turning dark."
   );
-
 }
 
-function announceFinalStorm() {
 
+/*
+ * Nacht 7:
+ * Normales Minecraft-Gewitter.
+ *
+ * Noch KEINE künstlichen HaraldCore-Blitze.
+ */
+function announceNight7() {
   for (
-    const player
-    of world.getAllPlayers()
+    const player of
+    world.getAllPlayers()
   ) {
-
     try {
-
       player.onScreenDisplay
         .setTitle(
-          "§4§lFINAL DAY",
+          "§c§lNIGHT 7",
+          {
+            subtitle:
+              "§7THE STORM IS GETTING WORSE.",
+            fadeInDuration: 10,
+            stayDuration: 40,
+            fadeOutDuration: 20,
+          }
+        );
+    } catch (_) {}
+
+    try {
+      player.playSound(
+        "ambient.weather.thunder"
+      );
+    } catch (_) {}
+  }
+
+  world.sendMessage(
+    "§c§lNIGHT 7 §r§7The storm is getting worse."
+  );
+}
+
+
+/*
+ * Nacht 8:
+ * Finales Gewitter.
+ *
+ * Ab hier kommen zusätzlich
+ * die künstlichen Blitze nahe Spielern.
+ */
+function announceFinalStorm() {
+  for (
+    const player of
+    world.getAllPlayers()
+  ) {
+    try {
+      player.onScreenDisplay
+        .setTitle(
+          "§4§lFINAL NIGHT",
           {
             subtitle:
               "§cTHE STORM HAS BEGUN.",
@@ -240,37 +287,33 @@ function announceFinalStorm() {
             fadeOutDuration: 20,
           }
         );
-
     } catch (_) {}
 
-
     try {
-
       player.playSound(
         "ambient.weather.thunder"
       );
-
     } catch (_) {}
-
   }
 
-
   world.sendMessage(
-    "§4§lFINAL DAY §r§cThe storm has begun."
+    "§4§lFINAL NIGHT §r§cThe storm has begun."
   );
-
 }
+
 
 function strikeNearPlayer(
   player
 ) {
+  /*
+   * Extra-Blitze nur im Overworld.
+   */
   if (
     player.dimension.id !==
     "minecraft:overworld"
   ) {
     return;
   }
-
 
   const location =
     player.location;
@@ -285,9 +328,7 @@ function strikeNearPlayer(
     Math.random() *
     9;
 
-
   const strikeLocation = {
-
     x:
       location.x +
       Math.cos(angle) *
@@ -300,43 +341,37 @@ function strikeNearPlayer(
       location.z +
       Math.sin(angle) *
       distance,
-
   };
 
-
   try {
-
     player.dimension.spawnEntity(
       "minecraft:lightning_bolt",
       strikeLocation
     );
-
   } catch (error) {
-
     console.warn(
       `[HaraldCore] Lightning error: ${error}`
     );
-
   }
-
 }
+
 
 export function registerFinalStorm() {
 
   system.runInterval(() => {
 
-    if (
-      isFinalDay()
-    ) {
+    const stormNight =
+      getStormNight();
 
+    if (
+      stormNight === 8
+    ) {
       if (
         weatherState !==
-        "storm"
+        "final"
       ) {
-
         weatherState =
-          "storm";
-
+          "final";
 
         lightningCountdown =
           randomInt(
@@ -344,65 +379,70 @@ export function registerFinalStorm() {
             10
           );
 
-
         startThunderstorm();
-
 
         announceFinalStorm();
 
-
         return;
-
       }
 
       startThunderstorm();
 
-
       return;
-
     }
 
     if (
-      isRainDay()
+      stormNight === 7
     ) {
+      if (
+        weatherState !==
+        "thunder"
+      ) {
+        weatherState =
+          "thunder";
 
+        startThunderstorm();
+
+        announceNight7();
+
+        return;
+      }
+
+      startThunderstorm();
+
+      return;
+    }
+
+    if (
+      stormNight === 6
+    ) {
       if (
         weatherState !==
         "rain"
       ) {
-
         weatherState =
           "rain";
 
-
         startRain();
 
-
-        announceRainDay();
-
+        announceNight6();
 
         return;
-
       }
 
       startRain();
 
-
       return;
-
     }
 
     if (
       weatherState !==
       "none"
     ) {
-
       weatherState =
         "none";
 
-
       clearWeather();
-
     }
 
   }, 200);
@@ -411,25 +451,33 @@ export function registerFinalStorm() {
 
     if (
       weatherState !==
-        "storm" ||
-      !isFinalDay()
+      "final"
     ) {
-
       return;
+    }
 
+
+    if (
+      getStormNight() !== 8
+    ) {
+      return;
     }
 
 
     lightningCountdown--;
 
+
     if (
       lightningCountdown > 0
     ) {
-
       return;
-
     }
 
+
+    /*
+     * Nächster Extra-Blitz
+     * nach 5–12 Sekunden.
+     */
     lightningCountdown =
       randomInt(
         5,
@@ -444,10 +492,9 @@ export function registerFinalStorm() {
     if (
       players.length === 0
     ) {
-
       return;
-
     }
+
 
     const player =
       players[
@@ -463,5 +510,4 @@ export function registerFinalStorm() {
     );
 
   }, 20);
-
 }
