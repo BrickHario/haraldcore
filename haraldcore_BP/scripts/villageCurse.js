@@ -3,56 +3,84 @@ import {
   system
 } from "@minecraft/server";
 
+
 const TICKS_PER_DAY =
   24000;
+
 
 const TIMER_KEY =
   "haraldcore:playedTicks";
 
+
 const WON_KEY =
   "haraldcore:challengeWon";
+
 
 const VILLAGES_KEY =
   "haraldcore:villages";
 
+
 const VILLAGE_COUNT_KEY =
   "haraldcore:villageCount";
+
 
 const PLAYER_RAID_KEY =
   "haraldcore:villageRaidOmen";
 
+
+const VISITED_VILLAGES_KEY =
+  "haraldcore:visitedVillages";
+
+
+/*
+ * Speichert pro Spieler,
+ * bei welchen Dörfern er die
+ * VISA EXPIRED Meldung bereits
+ * gesehen hat.
+ */
+const EXPIRED_VISA_SEEN_KEY =
+  "haraldcore:expiredVisaSeenVillages";
+
+
 const VILLAGER_SCAN_RADIUS =
   40;
+
 
 const BELL_VILLAGER_RADIUS =
   48;
 
+
 const VILLAGE_ENTER_RADIUS =
   60;
+
 
 const VILLAGE_VERTICAL_RADIUS =
   32;
 
+
 const VILLAGE_MERGE_RADIUS =
   128;
+
 
 const SCAN_INTERVAL =
   100;
 
+
 const SCAN_MOVE_DISTANCE =
   16;
+
 
 const SCAN_MAX_WAIT =
   400;
 
-const RAID_OMEN_TICKS =
-  600;
 
 const RAID_REINFORCE_DELAY =
   700;
 
+
 const RAIDER_CHECK_RADIUS =
   80;
+
 
 const RAIDER_TARGETS = [
   {
@@ -88,16 +116,27 @@ const RAIDER_TARGETS = [
   },
 ];
 
+
 let villages = [];
+
 
 let initialized =
   false;
 
+
 const playerScanState =
   new Map();
 
+
 const playerVillageState =
   new Map();
+
+
+/*
+ * ========================================
+ * GLOBALER HARALDCORE TIMER
+ * ========================================
+ */
 
 function getPlayedTicks() {
 
@@ -106,12 +145,14 @@ function getPlayedTicks() {
       TIMER_KEY
     );
 
+
   return (
     typeof ticks === "number"
       ? ticks
       : 0
   );
 }
+
 
 function challengeWon() {
 
@@ -122,12 +163,20 @@ function challengeWon() {
   );
 }
 
+
+/*
+ * ========================================
+ * VILLAGE SPEICHERN / LADEN
+ * ========================================
+ */
+
 function loadVillages() {
 
   const saved =
     world.getDynamicProperty(
       VILLAGES_KEY
     );
+
 
   if (
     typeof saved !== "string" ||
@@ -136,6 +185,7 @@ function loadVillages() {
     return [];
   }
 
+
   try {
 
     const parsed =
@@ -143,18 +193,62 @@ function loadVillages() {
         saved
       );
 
-    return (
-      Array.isArray(parsed)
-        ? parsed
-        : []
-    );
+
+    if (
+      !Array.isArray(
+        parsed
+      )
+    ) {
+      return [];
+    }
+
+
+    /*
+     * Alte gespeicherte Dörfer
+     * kompatibel mit dem neuen
+     * raidStarting State machen.
+     */
+    for (
+      const village of
+      parsed
+    ) {
+
+      if (
+        typeof village.cursed !==
+        "boolean"
+      ) {
+        village.cursed =
+          false;
+      }
+
+
+      if (
+        typeof village.raidStarted !==
+        "boolean"
+      ) {
+        village.raidStarted =
+          false;
+      }
+
+
+      /*
+       * Nach Welt-Reload niemals
+       * in einem alten "starting"
+       * Zustand hängen bleiben.
+       */
+      village.raidStarting =
+        false;
+    }
+
+
+    return parsed;
 
   } catch (_) {
 
     return [];
-
   }
 }
+
 
 function saveVillages() {
 
@@ -167,6 +261,7 @@ function saveVillages() {
       )
     );
 
+
     world.setDynamicProperty(
       VILLAGE_COUNT_KEY,
       villages.length
@@ -175,13 +270,16 @@ function saveVillages() {
   } catch (_) {}
 }
 
+
 function getNextVillageId() {
 
   let highest =
     0;
 
+
   for (
-    const village of villages
+    const village of
+    villages
   ) {
 
     if (
@@ -195,8 +293,16 @@ function getNextVillageId() {
     }
   }
 
+
   return highest + 1;
 }
+
+
+/*
+ * ========================================
+ * DISTANZ / VILLAGE FINDER
+ * ========================================
+ */
 
 function distanceSquared(
   a,
@@ -206,8 +312,10 @@ function distanceSquared(
   const dx =
     a.x - b.x;
 
+
   const dz =
     a.z - b.z;
+
 
   return (
     dx * dx +
@@ -215,23 +323,28 @@ function distanceSquared(
   );
 }
 
+
 function findVillageById(
   id
 ) {
 
   for (
-    const village of villages
+    const village of
+    villages
   ) {
 
     if (
       village.id === id
     ) {
+
       return village;
     }
   }
 
+
   return undefined;
 }
+
 
 function findKnownVillageNear(
   dimensionId,
@@ -242,14 +355,18 @@ function findKnownVillageNear(
   const maxDistance =
     radius * radius;
 
+
   let result =
     undefined;
+
 
   let closest =
     Infinity;
 
+
   for (
-    const village of villages
+    const village of
+    villages
   ) {
 
     if (
@@ -259,11 +376,13 @@ function findKnownVillageNear(
       continue;
     }
 
+
     const distance =
       distanceSquared(
         location,
         village
       );
+
 
     if (
       distance <=
@@ -275,13 +394,16 @@ function findKnownVillageNear(
       closest =
         distance;
 
+
       result =
         village;
     }
   }
 
+
   return result;
 }
+
 
 function playerInsideVillage(
   player,
@@ -289,31 +411,116 @@ function playerInsideVillage(
 ) {
 
   if (
-    player.dimension.id !==
-    village.dimension
+    !player ||
+    !village
   ) {
     return false;
   }
 
-  if (
-    Math.abs(
-      player.location.y -
-      village.y
-    ) >
-    VILLAGE_VERTICAL_RADIUS
-  ) {
+
+  try {
+
+    if (
+      player.dimension.id !==
+      village.dimension
+    ) {
+      return false;
+    }
+
+
+    if (
+      Math.abs(
+        player.location.y -
+        village.y
+      ) >
+      VILLAGE_VERTICAL_RADIUS
+    ) {
+      return false;
+    }
+
+
+    return (
+      distanceSquared(
+        player.location,
+        village
+      ) <=
+      VILLAGE_ENTER_RADIUS *
+      VILLAGE_ENTER_RADIUS
+    );
+
+  } catch (_) {
+
     return false;
   }
-
-  return (
-    distanceSquared(
-      player.location,
-      village
-    ) <=
-    VILLAGE_ENTER_RADIUS *
-    VILLAGE_ENTER_RADIUS
-  );
 }
+
+
+/*
+ * Gibt den Spieler zurück,
+ * der dem Dorfzentrum aktuell
+ * am nächsten ist.
+ *
+ * Es spielt KEINE Rolle,
+ * wer das Dorf entdeckt hat.
+ */
+function findPlayerInsideVillage(
+  village
+) {
+
+  let result =
+    undefined;
+
+
+  let closest =
+    Infinity;
+
+
+  for (
+    const player of
+    world.getPlayers()
+  ) {
+
+    if (
+      !playerInsideVillage(
+        player,
+        village
+      )
+    ) {
+      continue;
+    }
+
+
+    const distance =
+      distanceSquared(
+        player.location,
+        village
+      );
+
+
+    if (
+      distance <
+      closest
+    ) {
+
+      closest =
+        distance;
+
+
+      result =
+        player;
+    }
+  }
+
+
+  return result;
+}
+
+
+/*
+ * ========================================
+ * VILLAGER SCAN
+ * ========================================
+ */
 
 function getNearbyVillagers(
   dimension,
@@ -323,6 +530,7 @@ function getNearbyVillagers(
 
   const result =
     new Map();
+
 
   try {
 
@@ -340,8 +548,10 @@ function getNearbyVillagers(
           4,
       });
 
+
     for (
-      const villager of villagers
+      const villager of
+      villagers
     ) {
 
       result.set(
@@ -351,6 +561,7 @@ function getNearbyVillagers(
     }
 
   } catch (_) {}
+
 
   try {
 
@@ -368,8 +579,10 @@ function getNearbyVillagers(
           4,
       });
 
+
     for (
-      const villager of villagers
+      const villager of
+      villagers
     ) {
 
       result.set(
@@ -380,10 +593,12 @@ function getNearbyVillagers(
 
   } catch (_) {}
 
+
   return [
     ...result.values()
   ];
 }
+
 
 function getVillagerCenter(
   villagers
@@ -395,23 +610,29 @@ function getVillagerCenter(
     return undefined;
   }
 
+
   let x = 0;
   let y = 0;
   let z = 0;
 
+
   for (
-    const villager of villagers
+    const villager of
+    villagers
   ) {
 
     x +=
       villager.location.x;
 
+
     y +=
       villager.location.y;
+
 
     z +=
       villager.location.z;
   }
+
 
   return {
 
@@ -430,6 +651,13 @@ function getVillagerCenter(
   };
 }
 
+
+/*
+ * ========================================
+ * VISITED VILLAGES
+ * ========================================
+ */
+
 function hasVisitedVillage(
   player,
   village
@@ -439,24 +667,33 @@ function hasVisitedVillage(
 
     const saved =
       player.getDynamicProperty(
-        "haraldcore:visitedVillages"
+        VISITED_VILLAGES_KEY
       );
+
 
     const visited =
       typeof saved === "string"
-        ? JSON.parse(saved)
+        ? JSON.parse(
+            saved
+          )
         : [];
 
-    return visited.includes(
-      village.id
+
+    return (
+      Array.isArray(
+        visited
+      ) &&
+      visited.includes(
+        village.id
+      )
     );
 
   } catch (_) {
 
     return false;
-
   }
 }
+
 
 function markVillageVisited(
   player,
@@ -472,31 +709,243 @@ function markVillageVisited(
     return;
   }
 
+
   try {
 
     const saved =
       player.getDynamicProperty(
-        "haraldcore:visitedVillages"
+        VISITED_VILLAGES_KEY
       );
+
 
     const visited =
       typeof saved === "string"
-        ? JSON.parse(saved)
+        ? JSON.parse(
+            saved
+          )
         : [];
 
-    visited.push(
+
+    const list =
+      Array.isArray(
+        visited
+      )
+        ? visited
+        : [];
+
+
+    list.push(
       village.id
     );
 
+
     player.setDynamicProperty(
-      "haraldcore:visitedVillages",
+      VISITED_VILLAGES_KEY,
       JSON.stringify(
-        visited
+        list
       )
     );
 
   } catch (_) {}
 }
+
+
+/*
+ * ========================================
+ * VISA EXPIRED PRO SPIELER
+ * ========================================
+ */
+
+function hasSeenExpiredVisa(
+  player,
+  village
+) {
+
+  try {
+
+    const saved =
+      player.getDynamicProperty(
+        EXPIRED_VISA_SEEN_KEY
+      );
+
+
+    const seen =
+      typeof saved === "string"
+        ? JSON.parse(
+            saved
+          )
+        : [];
+
+
+    return (
+      Array.isArray(
+        seen
+      ) &&
+      seen.includes(
+        village.id
+      )
+    );
+
+  } catch (_) {
+
+    return false;
+  }
+}
+
+
+function markExpiredVisaSeen(
+  player,
+  village
+) {
+
+  if (
+    hasSeenExpiredVisa(
+      player,
+      village
+    )
+  ) {
+    return;
+  }
+
+
+  try {
+
+    const saved =
+      player.getDynamicProperty(
+        EXPIRED_VISA_SEEN_KEY
+      );
+
+
+    const seen =
+      typeof saved === "string"
+        ? JSON.parse(
+            saved
+          )
+        : [];
+
+
+    const list =
+      Array.isArray(
+        seen
+      )
+        ? seen
+        : [];
+
+
+    list.push(
+      village.id
+    );
+
+
+    player.setDynamicProperty(
+      EXPIRED_VISA_SEEN_KEY,
+      JSON.stringify(
+        list
+      )
+    );
+
+  } catch (_) {}
+}
+
+
+/*
+ * VISA EXPIRED wird NICHT
+ * mehr global gesendet.
+ *
+ * Nur dieser Spieler sieht es,
+ * wenn er JETZT wirklich in
+ * genau diesem Dorf steht.
+ */
+function announceExpiredVisaToPlayer(
+  player,
+  village
+) {
+
+  if (
+    !playerInsideVillage(
+      player,
+      village
+    )
+  ) {
+    return;
+  }
+
+
+  if (
+    hasSeenExpiredVisa(
+      player,
+      village
+    )
+  ) {
+    return;
+  }
+
+
+  markExpiredVisaSeen(
+    player,
+    village
+  );
+
+
+  try {
+
+    player.sendMessage(
+      "§4§lVISA EXPIRED!"
+    );
+
+
+    player.sendMessage(
+      "§4§lRUN! §cVILLAGE POLICE are coming!"
+    );
+
+
+    player.playSound(
+      "note.bass"
+    );
+
+  } catch (_) {}
+}
+
+
+/*
+ * Wird genau in dem Moment benutzt,
+ * in dem ein Dorf cursed wird.
+ *
+ * Nur Spieler, die JETZT dort stehen,
+ * bekommen die Nachricht.
+ */
+function announceExpiredVisaToPlayersInside(
+  village
+) {
+
+  for (
+    const player of
+    world.getPlayers()
+  ) {
+
+    if (
+      !playerInsideVillage(
+        player,
+        village
+      )
+    ) {
+      continue;
+    }
+
+
+    announceExpiredVisaToPlayer(
+      player,
+      village
+    );
+  }
+}
+
+
+/*
+ * ========================================
+ * VILLAGE REGISTRIEREN
+ * ========================================
+ */
 
 function registerVillage(
   player,
@@ -510,6 +959,7 @@ function registerVillage(
       VILLAGE_MERGE_RADIUS
     );
 
+
   if (existing) {
 
     enterKnownVillage(
@@ -517,8 +967,10 @@ function registerVillage(
       existing
     );
 
+
     return existing;
   }
+
 
   const village = {
 
@@ -549,26 +1001,48 @@ function registerVillage(
     cursed:
       false,
 
+    /*
+     * true =
+     * Raid wurde erfolgreich
+     * durch Vanilla gestartet.
+     */
     raidStarted:
       false,
 
+    /*
+     * true =
+     * gerade läuft ein Versuch,
+     * einem Spieler Bad Omen
+     * zu geben.
+     *
+     * Verhindert mehrere
+     * gleichzeitige Startversuche.
+     */
+    raidStarting:
+      false,
+
   };
+
 
   villages.push(
     village
   );
 
+
   saveVillages();
+
 
   playerVillageState.set(
     player.id,
     village.id
   );
 
+
   markVillageVisited(
     player,
     village
   );
+
 
   try {
 
@@ -576,14 +1050,23 @@ function registerVillage(
       "§aWelcome to the village. §eYour Visa expires in 1 day."
     );
 
+
     player.playSound(
       "random.levelup"
     );
 
   } catch (_) {}
 
+
   return village;
 }
+
+
+/*
+ * ========================================
+ * DORF BETRETEN
+ * ========================================
+ */
 
 function enterKnownVillage(
   player,
@@ -598,10 +1081,12 @@ function enterKnownVillage(
     return;
   }
 
+
   playerVillageState.set(
     player.id,
     village.id
   );
+
 
   if (
     !hasVisitedVillage(
@@ -615,13 +1100,17 @@ function enterKnownVillage(
       village
     );
 
-    if (!village.cursed) {
+
+    if (
+      !village.cursed
+    ) {
 
       try {
 
         player.sendMessage(
           "§eWelcome! This village was already found and your visa expires soon."
         );
+
 
         player.playSound(
           "random.levelup"
@@ -631,7 +1120,17 @@ function enterKnownVillage(
     }
   }
 
-  if (village.cursed) {
+
+  /*
+   * Dorf ist bereits abgelaufen.
+   *
+   * Spieler bekommt erst beim
+   * tatsächlichen Betreten
+   * VISA EXPIRED.
+   */
+  if (
+    village.cursed
+  ) {
 
     handleVillageEntry(
       player,
@@ -640,6 +1139,13 @@ function enterKnownVillage(
   }
 }
 
+
+/*
+ * ========================================
+ * SCAN MOVEMENT
+ * ========================================
+ */
+
 function shouldScanPlayer(
   player
 ) {
@@ -647,10 +1153,12 @@ function shouldScanPlayer(
   const now =
     system.currentTick;
 
+
   const state =
     playerScanState.get(
       player.id
     );
+
 
   if (!state) {
 
@@ -673,8 +1181,10 @@ function shouldScanPlayer(
       }
     );
 
+
     return true;
   }
+
 
   if (
     state.dimension !==
@@ -684,25 +1194,32 @@ function shouldScanPlayer(
     state.x =
       player.location.x;
 
+
     state.z =
       player.location.z;
+
 
     state.dimension =
       player.dimension.id;
 
+
     state.tick =
       now;
 
+
     return true;
   }
+
 
   const dx =
     player.location.x -
     state.x;
 
+
   const dz =
     player.location.z -
     state.z;
+
 
   const movedEnough =
     (
@@ -714,6 +1231,7 @@ function shouldScanPlayer(
       SCAN_MOVE_DISTANCE
     );
 
+
   const waitedEnough =
     (
       now -
@@ -721,24 +1239,37 @@ function shouldScanPlayer(
     ) >=
     SCAN_MAX_WAIT;
 
+
   if (
     !movedEnough &&
     !waitedEnough
   ) {
+
     return false;
   }
+
 
   state.x =
     player.location.x;
 
+
   state.z =
     player.location.z;
+
 
   state.tick =
     now;
 
+
   return true;
 }
+
+
+/*
+ * ========================================
+ * RAID OMEN
+ * ========================================
+ */
 
 function hasRaidOmen(
   player
@@ -753,9 +1284,15 @@ function hasRaidOmen(
   } catch (_) {
 
     return false;
-
   }
 }
+
+
+/*
+ * ========================================
+ * RAIDER COUNT
+ * ========================================
+ */
 
 function getRaiderCount(
   dimension,
@@ -788,9 +1325,9 @@ function getRaiderCount(
   } catch (_) {
 
     return 0;
-
   }
 }
+
 
 function getRaiderSpawnLocation(
   player
@@ -801,16 +1338,20 @@ function getRaiderSpawnLocation(
     Math.PI *
     2;
 
+
   const distance =
     10 +
     Math.random() *
     8;
 
+
   return {
 
     x:
       player.location.x +
-      Math.cos(angle) *
+      Math.cos(
+        angle
+      ) *
       distance,
 
     y:
@@ -819,11 +1360,20 @@ function getRaiderSpawnLocation(
 
     z:
       player.location.z +
-      Math.sin(angle) *
+      Math.sin(
+        angle
+      ) *
       distance,
 
   };
 }
+
+
+/*
+ * ========================================
+ * RAID REINFORCEMENT
+ * ========================================
+ */
 
 function reinforceVillage(
   village,
@@ -835,8 +1385,10 @@ function reinforceVillage(
     !village.cursed ||
     !player
   ) {
+
     return;
   }
+
 
   if (
     !playerInsideVillage(
@@ -844,11 +1396,14 @@ function reinforceVillage(
       village
     )
   ) {
+
     return;
   }
 
+
   const dimension =
     player.dimension;
+
 
   for (
     const target of
@@ -862,12 +1417,14 @@ function reinforceVillage(
         target.type
       );
 
+
     const missing =
       Math.max(
         0,
         target.amount -
         existing
       );
+
 
     for (
       let i = 0;
@@ -885,6 +1442,7 @@ function reinforceVillage(
             )
           );
 
+
         try {
 
           raider.addTag(
@@ -898,35 +1456,40 @@ function reinforceVillage(
   }
 }
 
-function announceExpiredVisa() {
 
-  world.sendMessage(
-    "§4§lVISA EXPIRED!"
-  );
-
-  world.sendMessage(
-    "§4§lRUN! §cVILLAGE POLICE are coming!"
-  );
-
-  for (
-    const onlinePlayer of
-    world.getPlayers()
-  ) {
-
-    try {
-
-      onlinePlayer.playSound(
-        "note.bass"
-      );
-
-    } catch (_) {}
-  }
-}
-
+/*
+ * ========================================
+ * RAID START
+ * ========================================
+ *
+ * Wichtig:
+ *
+ * Der ursprüngliche Entdecker ist
+ * komplett irrelevant.
+ *
+ * Jeder Spieler, der in diesem
+ * cursed Village steht, kann
+ * den Raid auslösen.
+ */
 function startRaidOmen(
   player,
   village
 ) {
+
+  if (
+    !player ||
+    !village
+  ) {
+    return;
+  }
+
+
+  if (
+    !village.cursed
+  ) {
+    return;
+  }
+
 
   if (
     village.raidStarted
@@ -934,11 +1497,47 @@ function startRaidOmen(
     return;
   }
 
+
+  if (
+    village.raidStarting
+  ) {
+    return;
+  }
+
+
+  /*
+   * Spieler muss aktuell
+   * wirklich dort stehen.
+   */
+  if (
+    !playerInsideVillage(
+      player,
+      village
+    )
+  ) {
+    return;
+  }
+
+
+  /*
+   * Startversuch sperren.
+   */
+  village.raidStarting =
+    true;
+
+
+  saveVillages();
+
+
+  /*
+   * Alte Omen entfernen.
+   */
   try {
 
     player.removeEffect(
       "raid_omen"
     );
+
 
     player.removeEffect(
       "bad_omen"
@@ -946,6 +1545,10 @@ function startRaidOmen(
 
   } catch (_) {}
 
+
+  /*
+   * HaraldCore Bad Omen geben.
+   */
   try {
 
     player.addEffect(
@@ -962,9 +1565,23 @@ function startRaidOmen(
 
   } catch (_) {
 
-    return;
+    /*
+     * Hat nicht funktioniert.
+     *
+     * Dorf wieder freigeben,
+     * damit ein anderer Spieler
+     * es versuchen kann.
+     */
+    village.raidStarting =
+      false;
 
+
+    saveVillages();
+
+
+    return;
   }
+
 
   try {
 
@@ -975,19 +1592,16 @@ function startRaidOmen(
 
   } catch (_) {}
 
-  if (!village.raidAnnounced) {
-
-    village.raidAnnounced =
-      true;
-
-    saveVillages();
-
-    announceExpiredVisa();
-  }
 
   const villageId =
     village.id;
 
+
+  /*
+   * Vanilla etwas Zeit geben,
+   * Bad Omen -> Raid Omen
+   * umzuwandeln.
+   */
   system.runTimeout(
     () => {
 
@@ -996,23 +1610,73 @@ function startRaidOmen(
           villageId
         );
 
+
       if (!savedVillage) {
         return;
       }
 
-      let raidOmen =
+
+      let playerStillInside =
         false;
+
 
       try {
 
-        raidOmen =
-          !!player.getEffect(
-            "raid_omen"
+        playerStillInside =
+          playerInsideVillage(
+            player,
+            savedVillage
           );
 
-      } catch (_) {}
+      } catch (_) {
 
-      if (!raidOmen) {
+        playerStillInside =
+          false;
+      }
+
+
+      let raidOmen =
+        false;
+
+
+      if (
+        playerStillInside
+      ) {
+
+        try {
+
+          raidOmen =
+            !!player.getEffect(
+              "raid_omen"
+            );
+
+        } catch (_) {
+
+          raidOmen =
+            false;
+        }
+      }
+
+
+      /*
+       * Spieler ist:
+       *
+       * - gestorben
+       * - weggegangen
+       * - ausgeloggt
+       * - oder Vanilla hat keinen
+       *   Raid gestartet
+       *
+       * Dann wird das Dorf wieder
+       * freigegeben.
+       *
+       * Ein anderer Spieler kann
+       * beim nächsten Check übernehmen.
+       */
+      if (
+        !playerStillInside ||
+        !raidOmen
+      ) {
 
         try {
 
@@ -1022,14 +1686,49 @@ function startRaidOmen(
 
         } catch (_) {}
 
+
+        try {
+
+          player.setDynamicProperty(
+            PLAYER_RAID_KEY,
+            false
+          );
+
+        } catch (_) {}
+
+
+        savedVillage.raidStarting =
+          false;
+
+
+        saveVillages();
+
+
         return;
       }
+
+
+      /*
+       * Vanilla Raid erfolgreich.
+       */
+      savedVillage.raidStarting =
+        false;
+
 
       savedVillage.raidStarted =
         true;
 
+
       saveVillages();
 
+
+      /*
+       * Etwas später zusätzliche
+       * HaraldCore Raider.
+       *
+       * Auch hier wird NICHT der
+       * ursprüngliche Entdecker benutzt.
+       */
       system.runTimeout(
         () => {
 
@@ -1038,9 +1737,11 @@ function startRaidOmen(
               savedVillage
             );
 
+
           if (!target) {
             return;
           }
+
 
           reinforceVillage(
             savedVillage,
@@ -1056,6 +1757,13 @@ function startRaidOmen(
   );
 }
 
+
+/*
+ * ========================================
+ * CURSED VILLAGE ENTRY
+ * ========================================
+ */
+
 function handleVillageEntry(
   player,
   village
@@ -1067,6 +1775,23 @@ function handleVillageEntry(
     return;
   }
 
+
+  /*
+   * Nur dieser Spieler sieht
+   * die VISA EXPIRED Meldung.
+   */
+  announceExpiredVisaToPlayer(
+    player,
+    village
+  );
+
+
+  /*
+   * Raid noch nicht gestartet:
+   *
+   * Dieser Spieler kann den
+   * Raid jetzt auslösen.
+   */
   if (
     !village.raidStarted
   ) {
@@ -1076,16 +1801,23 @@ function handleVillageEntry(
       village
     );
 
+
     return;
   }
 
+
+  /*
+   * Raid läuft bereits.
+   */
   if (
     hasRaidOmen(
       player
     )
   ) {
+
     return;
   }
+
 
   reinforceVillage(
     village,
@@ -1093,50 +1825,93 @@ function handleVillageEntry(
   );
 }
 
-function findPlayerInsideVillage(
-  village
-) {
 
-  let result =
-    undefined;
-
-  let closest =
-    Infinity;
+/*
+ * ========================================
+ * PENDING CURSED VILLAGES
+ * ========================================
+ *
+ * Sehr wichtig für:
+ *
+ * Spieler A entdeckt Dorf
+ * Spieler A stirbt
+ * Visa läuft ab
+ * Spieler B ist dort
+ *
+ * -> Spieler B bekommt Bad Omen.
+ */
+function updatePendingVillageRaids() {
 
   for (
-    const player of
-    world.getPlayers()
+    const village of
+    villages
   ) {
 
     if (
-      !playerInsideVillage(
-        player,
-        village
-      )
+      !village.cursed
     ) {
       continue;
     }
 
-    const distance =
-      distanceSquared(
-        player.location,
+
+    if (
+      village.raidStarted
+    ) {
+      continue;
+    }
+
+
+    if (
+      village.raidStarting
+    ) {
+      continue;
+    }
+
+
+    /*
+     * Irgendeinen Spieler nehmen,
+     * der aktuell im Dorf steht.
+     */
+    const player =
+      findPlayerInsideVillage(
         village
       );
 
-    if (
-      distance < closest
-    ) {
 
-      closest =
-        distance;
-
-      result =
-        player;
+    /*
+     * Niemand da:
+     *
+     * Dorf bleibt einfach cursed
+     * und wartet.
+     */
+    if (!player) {
+      continue;
     }
-  }
 
-  return result;
+
+    /*
+     * Nur der Spieler im Dorf
+     * bekommt die Meldung.
+     */
+    announceExpiredVisaToPlayer(
+      player,
+      village
+    );
+
+
+    startRaidOmen(
+      player,
+      village
+    );
+  }
 }
+
+
+/*
+ * ========================================
+ * KNOWN VILLAGE ENTRY CHECK
+ * ========================================
+ */
 
 function updateKnownVillageEntries() {
 
@@ -1154,8 +1929,10 @@ function updateKnownVillageEntries() {
         player.id
       );
 
+
       continue;
     }
+
 
     const village =
       findKnownVillageNear(
@@ -1164,10 +1941,12 @@ function updateKnownVillageEntries() {
         VILLAGE_ENTER_RADIUS
       );
 
+
     const previousVillage =
       playerVillageState.get(
         player.id
       );
+
 
     if (!village) {
 
@@ -1181,15 +1960,30 @@ function updateKnownVillageEntries() {
         );
       }
 
+
       continue;
     }
+
 
     if (
       previousVillage ===
       village.id
     ) {
+
+      /*
+       * Wichtig:
+       *
+       * Wenn der Spieler schon im Dorf
+       * stand, während es cursed wurde,
+       * wird VISA EXPIRED über
+       * updateVillageTimers()
+       * bzw. updatePendingVillageRaids()
+       * behandelt.
+       */
+
       continue;
     }
+
 
     enterKnownVillage(
       player,
@@ -1197,6 +1991,13 @@ function updateKnownVillageEntries() {
     );
   }
 }
+
+
+/*
+ * ========================================
+ * NEW VILLAGE SCAN
+ * ========================================
+ */
 
 function scanForNewVillages() {
 
@@ -1209,8 +2010,10 @@ function scanForNewVillages() {
       player.dimension.id !==
       "minecraft:overworld"
     ) {
+
       continue;
     }
+
 
     const knownVillage =
       findKnownVillageNear(
@@ -1219,17 +2022,21 @@ function scanForNewVillages() {
         VILLAGE_ENTER_RADIUS
       );
 
+
     if (knownVillage) {
       continue;
     }
+
 
     if (
       !shouldScanPlayer(
         player
       )
     ) {
+
       continue;
     }
+
 
     const villagers =
       getNearbyVillagers(
@@ -1238,20 +2045,25 @@ function scanForNewVillages() {
         VILLAGER_SCAN_RADIUS
       );
 
+
     if (
       villagers.length < 2
     ) {
+
       continue;
     }
+
 
     const center =
       getVillagerCenter(
         villagers
       );
 
+
     if (!center) {
       continue;
     }
+
 
     registerVillage(
       player,
@@ -1260,51 +2072,92 @@ function scanForNewVillages() {
   }
 }
 
+
+/*
+ * ========================================
+ * VISA TIMER
+ * ========================================
+ */
+
 function updateVillageTimers() {
 
   const playedTicks =
     getPlayedTicks();
 
+
   let changed =
     false;
+
 
   for (
     const village of
     villages
   ) {
 
+    /*
+     * Bereits expired.
+     */
     if (
       village.cursed
     ) {
+
       continue;
     }
 
+
+    /*
+     * Noch kein voller HaraldCore-Tag
+     * seit Entdeckung vergangen.
+     */
     if (
       playedTicks -
       village.discoveredAt <
       TICKS_PER_DAY
     ) {
+
       continue;
     }
 
+
+    /*
+     * VISA ABGELAUFEN.
+     */
     village.cursed =
       true;
+
+
+    village.raidStarting =
+      false;
+
 
     changed =
       true;
 
-    if (!village.raidAnnounced) {
 
-      village.raidAnnounced =
-        true;
+    /*
+     * KEINE globale Meldung.
+     *
+     * Nur Spieler, die genau jetzt
+     * in diesem Dorf stehen,
+     * sehen VISA EXPIRED.
+     */
+    announceExpiredVisaToPlayersInside(
+      village
+    );
 
-      announceExpiredVisa();
-    }
 
+    /*
+     * Irgendeinen Spieler auswählen,
+     * der gerade dort ist.
+     *
+     * Wer das Dorf entdeckt hat,
+     * spielt keine Rolle.
+     */
     const player =
       findPlayerInsideVillage(
         village
       );
+
 
     if (player) {
 
@@ -1315,11 +2168,19 @@ function updateVillageTimers() {
     }
   }
 
+
   if (changed) {
 
     saveVillages();
   }
 }
+
+
+/*
+ * ========================================
+ * OMEN PROPERTY CLEANUP
+ * ========================================
+ */
 
 function cleanupRaidOmenPlayers() {
 
@@ -1331,6 +2192,7 @@ function cleanupRaidOmenPlayers() {
     let ours =
       false;
 
+
     try {
 
       ours =
@@ -1340,17 +2202,21 @@ function cleanupRaidOmenPlayers() {
 
     } catch (_) {}
 
+
     if (!ours) {
       continue;
     }
+
 
     if (
       hasRaidOmen(
         player
       )
     ) {
+
       continue;
     }
+
 
     try {
 
@@ -1363,144 +2229,199 @@ function cleanupRaidOmenPlayers() {
   }
 }
 
+
+/*
+ * ========================================
+ * REGISTER
+ * ========================================
+ */
+
 export function registerVillageCurse() {
+
+  /*
+   * ======================================
+   * BELL DETECTION
+   * ======================================
+   */
 
   world.afterEvents
     .playerInteractWithBlock
-    .subscribe(event => {
+    .subscribe(
+      event => {
 
-      if (
-        !initialized ||
-        challengeWon()
-      ) {
-        return;
-      }
+        if (
+          !initialized ||
+          challengeWon()
+        ) {
 
-      if (
-        !event.isFirstEvent
-      ) {
-        return;
-      }
+          return;
+        }
 
-      const player =
-        event.player;
 
-      if (
-        player.dimension.id !==
-        "minecraft:overworld"
-      ) {
-        return;
-      }
+        if (
+          !event.isFirstEvent
+        ) {
 
-      if (
-        event.block.typeId !==
-        "minecraft:bell"
-      ) {
-        return;
-      }
+          return;
+        }
 
-      const existing =
-        findKnownVillageNear(
-          player.dimension.id,
-          event.block.location,
-          VILLAGE_MERGE_RADIUS
-        );
 
-      if (existing) {
+        const player =
+          event.player;
 
-        enterKnownVillage(
+
+        if (
+          player.dimension.id !==
+          "minecraft:overworld"
+        ) {
+
+          return;
+        }
+
+
+        if (
+          event.block.typeId !==
+          "minecraft:bell"
+        ) {
+
+          return;
+        }
+
+
+        const existing =
+          findKnownVillageNear(
+            player.dimension.id,
+            event.block.location,
+            VILLAGE_MERGE_RADIUS
+          );
+
+
+        if (existing) {
+
+          enterKnownVillage(
+            player,
+            existing
+          );
+
+
+          return;
+        }
+
+
+        const villagers =
+          getNearbyVillagers(
+            player.dimension,
+            event.block.location,
+            BELL_VILLAGER_RADIUS
+          );
+
+
+        if (
+          villagers.length < 1
+        ) {
+
+          return;
+        }
+
+
+        registerVillage(
           player,
-          existing
+          event.block.location
         );
-
-        return;
       }
+    );
 
-      const villagers =
-        getNearbyVillagers(
-          player.dimension,
-          event.block.location,
-          BELL_VILLAGER_RADIUS
-        );
 
-      if (
-        villagers.length < 1
-      ) {
-        return;
-      }
-
-      registerVillage(
-        player,
-        event.block.location
-      );
-
-    });
+  /*
+   * ======================================
+   * MILK BLOCK
+   * ======================================
+   */
 
   world.beforeEvents
     .itemUse
-    .subscribe(event => {
+    .subscribe(
+      event => {
 
-      if (
-        !event.itemStack ||
-        event.itemStack.typeId !==
-          "minecraft:milk_bucket"
-      ) {
-        return;
-      }
+        if (
+          !event.itemStack ||
+          event.itemStack.typeId !==
+            "minecraft:milk_bucket"
+        ) {
 
-      const player =
-        event.source;
-
-      if (
-        !player ||
-        player.typeId !==
-          "minecraft:player"
-      ) {
-        return;
-      }
-
-      let ourOmen =
-        false;
-
-      try {
-
-        ourOmen =
-          player.getDynamicProperty(
-            PLAYER_RAID_KEY
-          ) === true;
-
-      } catch (_) {}
-
-      if (!ourOmen) {
-        return;
-      }
-
-      if (
-        !hasRaidOmen(
-          player
-        )
-      ) {
-        return;
-      }
-
-      event.cancel =
-        true;
-
-      system.run(
-        () => {
-
-          try {
-
-            player.sendMessage(
-              "§4The omen cannot be washed away."
-            );
-
-          } catch (_) {}
-
+          return;
         }
-      );
 
-    });
+
+        const player =
+          event.source;
+
+
+        if (
+          !player ||
+          player.typeId !==
+            "minecraft:player"
+        ) {
+
+          return;
+        }
+
+
+        let ourOmen =
+          false;
+
+
+        try {
+
+          ourOmen =
+            player.getDynamicProperty(
+              PLAYER_RAID_KEY
+            ) === true;
+
+        } catch (_) {}
+
+
+        if (!ourOmen) {
+          return;
+        }
+
+
+        if (
+          !hasRaidOmen(
+            player
+          )
+        ) {
+
+          return;
+        }
+
+
+        event.cancel =
+          true;
+
+
+        system.run(
+          () => {
+
+            try {
+
+              player.sendMessage(
+                "§4The omen cannot be washed away."
+              );
+
+            } catch (_) {}
+
+          }
+        );
+      }
+    );
+
+
+  /*
+   * ======================================
+   * INITIALISIERUNG
+   * ======================================
+   */
 
   system.run(
     () => {
@@ -1508,11 +2429,21 @@ export function registerVillageCurse() {
       villages =
         loadVillages();
 
+
       saveVillages();
+
 
       initialized =
         true;
 
+
+      /*
+       * ==================================
+       * VILLAGE ENTER CHECK
+       *
+       * jede Sekunde
+       * ==================================
+       */
       system.runInterval(
         () => {
 
@@ -1520,8 +2451,10 @@ export function registerVillageCurse() {
             !initialized ||
             challengeWon()
           ) {
+
             return;
           }
+
 
           updateKnownVillageEntries();
 
@@ -1529,6 +2462,12 @@ export function registerVillageCurse() {
         20
       );
 
+
+      /*
+       * ==================================
+       * NEW VILLAGE SCAN
+       * ==================================
+       */
       system.runInterval(
         () => {
 
@@ -1536,8 +2475,10 @@ export function registerVillageCurse() {
             !initialized ||
             challengeWon()
           ) {
+
             return;
           }
+
 
           scanForNewVillages();
 
@@ -1545,6 +2486,14 @@ export function registerVillageCurse() {
         SCAN_INTERVAL
       );
 
+
+      /*
+       * ==================================
+       * VISA TIMER CHECK
+       *
+       * jede Sekunde
+       * ==================================
+       */
       system.runInterval(
         () => {
 
@@ -1552,8 +2501,10 @@ export function registerVillageCurse() {
             !initialized ||
             challengeWon()
           ) {
+
             return;
           }
+
 
           updateVillageTimers();
 
@@ -1561,6 +2512,43 @@ export function registerVillageCurse() {
         20
       );
 
+
+      /*
+       * ==================================
+       * PENDING RAID CHECK
+       *
+       * jede Sekunde
+       *
+       * Wenn der ursprüngliche Spieler
+       * tot / offline / weg ist,
+       * kann irgendein anderer Spieler
+       * im Dorf den Raid übernehmen.
+       * ==================================
+       */
+      system.runInterval(
+        () => {
+
+          if (
+            !initialized ||
+            challengeWon()
+          ) {
+
+            return;
+          }
+
+
+          updatePendingVillageRaids();
+
+        },
+        20
+      );
+
+
+      /*
+       * ==================================
+       * OMEN CLEANUP
+       * ==================================
+       */
       system.runInterval(
         () => {
 
