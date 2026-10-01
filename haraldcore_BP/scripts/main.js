@@ -1,6 +1,5 @@
 import { registerAfkBurn } from "./afkBurn.js";
 import { registerDailyHeal } from "./heal.js";
-import { registerRules } from "./uiRules.js";
 import { registerUITasks } from "./uiTasks.js";
 import { registerChecklistUI } from "./uiChecklist.js";
 import { registerTaskBook } from "./taskBook.js";
@@ -30,12 +29,12 @@ import {
 import { registerNoProgressPunishment } from "./noProgressPunishment.js";
 import { registerNightScares } from "./nightScares.js";
 import { registerVillageCurse } from "./villageCurse.js";
+import { registerRanklist } from "./uiRanklist.js"
 
 registerWelcome();
 
 registerAfkBurn();
 registerDailyHeal();
-registerRules();
 registerUITasks();
 registerChecklistUI();
 registerTaskBook();
@@ -45,6 +44,7 @@ registerFinalStorm();
 registerNoProgressPunishment();
 registerNightScares();
 registerVillageCurse();
+registerRanklist();
 
 registerGetBoat();
 registerGetIronBars();
