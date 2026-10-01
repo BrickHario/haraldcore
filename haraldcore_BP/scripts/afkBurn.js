@@ -455,42 +455,66 @@ export function registerAfkBurn() {
        * Tag 5–7 = 20 Blöcke
        * Tag 8   = 10 Blöcke
        */
-      const progress =
-        Math.min(
-          state.idleSeconds,
-          maxIdleTime
-        );
+     const progress =
+  Math.min(
+    state.idleSeconds,
+    maxIdleTime
+  );
 
 
-      const remaining =
-        Math.max(
-          maxIdleTime -
-          progress,
-          0
-        );
+const remaining =
+  Math.max(
+    maxIdleTime -
+    progress,
+    0
+  );
+
+if (
+  remaining <= 5 &&
+  remaining > 0
+) {
+
+  const alarmPitch =
+    1.0 +
+    (
+      5 - remaining
+    ) * 0.2;
 
 
-      const bar =
-        "§c" +
+  try {
 
-        "█".repeat(
-          progress
-        ) +
+    player.playSound(
+      "note.pling",
+      {
+        volume: 1.0,
+        pitch: alarmPitch,
+      }
+    );
 
-        "§7" +
+  } catch (_) {}
+}
 
-        "█".repeat(
-          remaining
-        );
+const bar =
+  "§c" +
+
+  "█".repeat(
+    progress
+  ) +
+
+  "§7" +
+
+  "█".repeat(
+    remaining
+  );
 
 
-      /*
-       * ======================================
-       * FARBE JE NACH TAG
-       * ======================================
-       */
-      let titleColor =
-        "§e";
+/*
+ * ======================================
+ * FARBE JE NACH TAG
+ * ======================================
+ */
+let titleColor =
+  "§e";
 
 
       /*
