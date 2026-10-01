@@ -3,32 +3,6 @@ import {
   system,
 } from "@minecraft/server";
 
-
-/*
- * =========================================================
- * HARALDCORE NO PROGRESS PUNISHMENT
- * =========================================================
- *
- * 1 Tag ohne neuen Task:
- * -> 10 Sekunden Darkness + Nausea
- *
- * 2 Tage ohne neuen Task:
- * -> 20 Sekunden Darkness + Nausea
- *
- * 3 Tage ohne neuen Task:
- * -> 30 Sekunden Darkness + Nausea
- *
- * usw.
- *
- * Sobald irgendein Task geschafft wird:
- *
- * -> Darkness sofort entfernen
- * -> Nausea sofort entfernen
- * -> No-Progress-Timer zurücksetzen
- * -> No-Progress-Days wieder auf 0
- */
-
-
 const TIMER_KEY =
   "haraldcore:playedTicks";
 
@@ -62,6 +36,7 @@ const TASKS = [
   "Get a Golden Apple",
   "Get to nether",
 ];
+
 
 function getCompletedTaskCount() {
 
@@ -105,6 +80,7 @@ function getCompletedTaskCount() {
   return completed;
 }
 
+
 function getPlayedTicks() {
 
   const value =
@@ -119,6 +95,7 @@ function getPlayedTicks() {
       : 0
   );
 }
+
 
 function challengeIsActive() {
 
@@ -155,6 +132,7 @@ function stopPunishment() {
 
     } catch (_) {}
 
+
     try {
 
       player.removeEffect(
@@ -162,6 +140,16 @@ function stopPunishment() {
       );
 
     } catch (_) {}
+
+
+    try {
+
+      player.removeEffect(
+        "slowness"
+      );
+
+    } catch (_) {}
+
 
     try {
 
@@ -189,8 +177,10 @@ function punishPlayers(
   const punishmentSeconds =
     noProgressDays * 10;
 
+
   const punishmentTicks =
     punishmentSeconds * 20;
+
 
   world.sendMessage(
     "§4§lNO PROGRESS."
@@ -205,6 +195,7 @@ function punishPlayers(
   world.sendMessage(
     `§8The curse torments you for ${punishmentSeconds} seconds.`
   );
+
 
   for (
     const player
@@ -231,6 +222,19 @@ function punishPlayers(
         punishmentTicks,
         {
           amplifier: 0,
+          showParticles: false,
+        }
+      );
+
+    } catch (_) {}
+
+    try {
+
+      player.addEffect(
+        "slowness",
+        punishmentTicks,
+        {
+          amplifier: 1,
           showParticles: false,
         }
       );
@@ -290,6 +294,7 @@ export function registerNoProgressPunishment() {
     const completedTasks =
       getCompletedTaskCount();
 
+
     const savedDoneCount =
       world.getDynamicProperty(
         LAST_DONE_COUNT_KEY
@@ -301,38 +306,27 @@ export function registerNoProgressPunishment() {
         ? savedDoneCount
         : completedTasks;
 
+
     const savedProgress =
       world.getDynamicProperty(
         LAST_PROGRESS_KEY
       );
-
 
     if (
       typeof savedProgress !==
       "number"
     ) {
 
-      /*
-       * Aktuelle Zeit als Startpunkt.
-       */
       world.setDynamicProperty(
         LAST_PROGRESS_KEY,
         playedTicks
       );
 
-
-      /*
-       * Aktuelle Anzahl fertiger Tasks.
-       */
       world.setDynamicProperty(
         LAST_DONE_COUNT_KEY,
         completedTasks
       );
 
-
-      /*
-       * Noch kein No-Progress-Tag.
-       */
       world.setDynamicProperty(
         NO_PROGRESS_DAYS_KEY,
         0
@@ -341,47 +335,24 @@ export function registerNoProgressPunishment() {
 
       return;
     }
-
-
-    /*
-     * =====================================================
-     * NEUER TASK GESCHAFFT
-     * =====================================================
-     */
 
     if (
       completedTasks >
       lastDoneCount
     ) {
 
-      /*
-       * Laufende Darkness +
-       * Nausea sofort abbrechen.
-       */
       stopPunishment();
 
-
-      /*
-       * Timer ab jetzt neu starten.
-       */
       world.setDynamicProperty(
         LAST_PROGRESS_KEY,
         playedTicks
       );
 
-
-      /*
-       * Neuen Task-Stand speichern.
-       */
       world.setDynamicProperty(
         LAST_DONE_COUNT_KEY,
         completedTasks
       );
 
-
-      /*
-       * Eskalation zurücksetzen.
-       */
       world.setDynamicProperty(
         NO_PROGRESS_DAYS_KEY,
         0
@@ -390,13 +361,6 @@ export function registerNoProgressPunishment() {
 
       return;
     }
-
-
-    /*
-     * =====================================================
-     * TASKANZAHL ANDERS VERÄNDERT
-     * =====================================================
-     */
 
     if (
       completedTasks !==
@@ -410,22 +374,11 @@ export function registerNoProgressPunishment() {
 
     }
 
-
-    /*
-     * =====================================================
-     * WIE LANGE OHNE NEUEN TASK?
-     * =====================================================
-     */
-
     const lastProgress =
       world.getDynamicProperty(
         LAST_PROGRESS_KEY
       );
 
-
-    /*
-     * Sicherheitscheck.
-     */
     if (
       typeof lastProgress !==
       "number"
@@ -445,11 +398,6 @@ export function registerNoProgressPunishment() {
       playedTicks -
       lastProgress;
 
-
-    /*
-     * Noch kein kompletter
-     * HaraldCore-Tag vergangen.
-     */
     if (
       noProgressTicks <
       TICKS_PER_DAY
@@ -457,13 +405,6 @@ export function registerNoProgressPunishment() {
 
       return;
     }
-
-
-    /*
-     * =====================================================
-     * NÄCHSTER TAG OHNE FORTSCHRITT
-     * =====================================================
-     */
 
     const savedDays =
       world.getDynamicProperty(
@@ -480,41 +421,15 @@ export function registerNoProgressPunishment() {
     const newDays =
       oldDays + 1;
 
-
-    /*
-     * Neue Anzahl Tage speichern.
-     */
     world.setDynamicProperty(
       NO_PROGRESS_DAYS_KEY,
       newDays
     );
 
-
-    /*
-     * =========================================
-     * STRAFE
-     * =========================================
-     *
-     * Tag 1:
-     * 10 Sekunden Darkness + Nausea
-     *
-     * Tag 2:
-     * 20 Sekunden Darkness + Nausea
-     *
-     * Tag 3:
-     * 30 Sekunden Darkness + Nausea
-     *
-     * usw.
-     */
     punishPlayers(
       newDays
     );
 
-
-    /*
-     * Timer für den nächsten
-     * kompletten Tag neu starten.
-     */
     world.setDynamicProperty(
       LAST_PROGRESS_KEY,
       playedTicks
